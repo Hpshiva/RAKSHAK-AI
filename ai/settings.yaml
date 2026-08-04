@@ -1,0 +1,39 @@
+model-settings:
+  prediction-threshold: 0.23
+  model-name: "ViT-L-14"
+  pretrained: "openai"
+  device: "cpu"
+
+label-settings:
+  labels:
+    # Outdoor
+    - people walking on a street
+    - buildings
+    - fight on a street
+    - fire on a street
+    - street violence
+    - road
+    - car crash
+    - cars on a road
+    - car parking area
+    - cars
+
+    # Indoor
+    - office environment
+    - office corridor
+    - violence in office
+    - fire in office
+    - people talking
+    - people walking in office
+    - person walking in office
+    - group of people
+
+    # Weapons & High Threats
+    - person holding a gun
+    - person holding a knife
+    - weapon
+    - armed robbery
+    - physical assault
+    - explosion
+
+  default-label: Unknown

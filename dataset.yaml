@@ -1,0 +1,16 @@
+# Dataset configuration for YOLOv8 Custom Training
+# Reference: https://docs.ultralytics.com/datasets/detect/
+
+# Paths to the training and validation images
+# These should be relative to where train.py is executed, or absolute paths
+train: ./datasets/my_custom_data/images/train  # path to training images
+val: ./datasets/my_custom_data/images/val      # path to validation images
+
+# Number of classes
+nc: 1
+
+# Class names (in exact order as your label files)
+names:
+  0: person
+  # 1: weapon
+  # 2: another_class

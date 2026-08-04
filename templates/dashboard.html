@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - Multi-Camera Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        /* Critical alert background pulse */
+        body.critical-alert {
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { background-color: rgba(239, 68, 68, 0.1); }
+            50% { background-color: rgba(239, 68, 68, 0.3); }
+            100% { background-color: rgba(239, 68, 68, 0.1); }
+        }
+
+        /* Top navigation */
+        .topbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+
+        .logout-btn {
+            background: #f1f5f9;
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background: #e2e8f0;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-top: 60px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Video Grid */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-header {
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .video-feed {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            background: #000;
+        }
+
+        /* Sidebar Log */
+        .sidebar {
+            width: 320px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            margin-top: 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent-green);
+            margin-bottom: 5px;
+        }
+
+        .status-pill.threat-HIGH { background: var(--accent-orange); }
+        .status-pill.threat-CRITICAL { background: var(--accent-red); }
+
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .log-item {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .log-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .log-label {
+            font-weight: 600;
+        }
+
+        .log-cam {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .log-threat-CRITICAL .log-label { color: var(--accent-red); }
+        .log-threat-HIGH .log-label { color: var(--accent-orange); }
+        
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>RAKSHAK AI</h1>
+        <a href="/logout" class="logout-btn">Log Out</a>
+    </div>
+
+    <div class="main-content">
+        <div class="video-grid">
+            
+            <!-- Webcam -->
+            <div class="video-card">
+                <div class="video-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="live-dot" id="webcam-dot"></div>
+                        Webcam (Live)
+                    </div>
+                    <div>
+                        <button onclick="toggleWebcam(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Turn Off</button>
+                        <button onclick="toggleFullscreen(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Fullscreen</button>
+                    </div>
+                </div>
+                <div class="video-container" style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; display: flex; flex-direction: column; overflow: hidden;">
+                    <img src="/camera_feed" class="video-feed" alt="Webcam" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+
+            <!-- Video Upload -->
+            <div class="video-card" style="padding: 20px; display: flex; align-items: center; justify-content: center; background: #fff;">
+                <form action="/upload_video" method="POST" enctype="multipart/form-data" style="text-align: center;">
+                    <h3 style="margin-bottom: 15px; color: var(--text-primary);">Upload a Video for Analysis</h3>
+                    <input type="file" name="video_file" accept="video/mp4,video/x-m4v,video/*" required style="margin-bottom: 15px; max-width: 100%;">
+                    <br>
+                    <button type="submit" style="background: var(--accent-orange); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s;">Upload and Analyze</button>
+                </form>
+            </div>
+
+            {% if has_uploaded_video %}
+            <div class="video-card">
+                <div class="video-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="live-dot" style="background:var(--accent-green)" id="uploaded-dot"></div>
+                        Uploaded Video Analysis
+                    </div>
+                    <div>
+                        <button onclick="closeVideo(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ff4444; background: white; border-radius: 4px; color: #ff4444;">Close</button>
+                        <button onclick="toggleFullscreen(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Fullscreen</button>
+                    </div>
+                </div>
+                <div class="video-container" style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; display: flex; flex-direction: column; overflow: hidden;">
+                    <img src="/uploaded_video_feed" class="video-feed" alt="Uploaded Video Feed" style="flex: 1; min-height: 0; object-fit: contain; width: 100%;">
+                    
+                    <!-- Controls -->
+                    <div style="background: rgba(0,0,0,0.85); padding: 12px; display: flex; justify-content: center; gap: 15px; border-top: 1px solid #333; z-index: 10;">
+                        <button onclick="controlVideo('seek/-5')" style="padding: 6px 12px; font-size: 0.9rem; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; transition: background 0.2s;">⏪ 5s</button>
+                        <button onclick="controlVideo('play')" id="play-btn" style="padding: 6px 12px; font-size: 0.9rem; cursor: pointer; background: var(--accent-green); color: white; border: none; border-radius: 4px; display: none; transition: background 0.2s;">Play</button>
+                        <button onclick="controlVideo('pause')" id="pause-btn" style="padding: 6px 12px; font-size: 0.9rem; cursor: pointer; background: var(--accent-orange); color: white; border: none; border-radius: 4px; transition: background 0.2s;">Pause</button>
+                        <button onclick="controlVideo('seek/5')" style="padding: 6px 12px; font-size: 0.9rem; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; transition: background 0.2s;">⏩ 5s</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>System Status</h2>
+            <div id="system-threat" class="status-pill">System Normal</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">
+                Total People: <span id="system-people">0</span>
+            </div>
+        </div>
+        <div class="log-container" id="log-container">
+            <!-- Logs will be injected here -->
+        </div>
+    </div>
+
+    <script>
+        // Advanced Video Controls
+        async function toggleWebcam(btn) {
+            const res = await fetch('/api/toggle_webcam', { method: 'POST' });
+            const data = await res.json();
+            if (data.webcam_enabled) {
+                btn.textContent = "Turn Off";
+                document.getElementById('webcam-dot').style.display = 'block';
+            } else {
+                btn.textContent = "Turn On";
+                document.getElementById('webcam-dot').style.display = 'none';
+            }
+        }
+
+        async function controlVideo(action) {
+            await fetch('/api/video/' + action, { method: 'POST' });
+            if (action === 'play') {
+                document.getElementById('play-btn').style.display = 'none';
+                document.getElementById('pause-btn').style.display = 'block';
+                document.getElementById('uploaded-dot').style.display = 'block';
+            } else if (action === 'pause') {
+                document.getElementById('play-btn').style.display = 'block';
+                document.getElementById('pause-btn').style.display = 'none';
+                document.getElementById('uploaded-dot').style.display = 'none';
+            }
+        }
+
+        async function closeVideo(btn) {
+            await fetch('/api/video/close', { method: 'POST' });
+            btn.closest('.video-card').style.display = 'none';
+        }
+
+        function toggleFullscreen(btn) {
+            const container = btn.closest('.video-card').querySelector('.video-container');
+            if (!document.fullscreenElement) {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Update Detections Log
+        async function fetchDetections() {
+            try {
+                const response = await fetch('/detections');
+                const data = await response.json();
+                
+                const logContainer = document.getElementById('log-container');
+                logContainer.innerHTML = '';
+                
+                data.forEach(item => {
+                    const log = document.createElement('div');
+                    log.className = `log-item log-threat-${item.threat}`;
+                    
+                    log.innerHTML = `
+                        <div class="log-time">${item.time}</div>
+                        <div class="log-label">${item.label} (${item.confidence}%)</div>
+                        <div class="log-cam">📍 ${item.camera}</div>
+                    `;
+                    logContainer.appendChild(log);
+                });
+            } catch (err) {
+                console.error("Error fetching logs", err);
+            }
+        }
+
+        // Update System Status
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/robot_status');
+                const data = await response.json();
+                
+                document.getElementById('system-people').textContent = data.people;
+                
+                const threatPill = document.getElementById('system-threat');
+                threatPill.className = `status-pill threat-${data.threat}`;
+                threatPill.textContent = data.threat === 'LOW' ? 'System Normal' : `Threat Level: ${data.threat}`;
+                
+                if (data.threat === 'CRITICAL') {
+                    document.body.classList.add('critical-alert');
+                } else {
+                    document.body.classList.remove('critical-alert');
+                }
+                
+            } catch (err) {
+                console.error("Error fetching status", err);
+            }
+        }
+
+        // Poll every 1 second
+        setInterval(() => {
+            fetchDetections();
+            fetchStatus();
+        }, 1000);
+        
+        // Initial fetch
+        fetchDetections();
+        fetchStatus();
+    </script>
+</body>
+</html>
