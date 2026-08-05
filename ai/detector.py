@@ -1,6 +1,8 @@
 import cv2
 import os
 import threading
+import time
+import pyttsx3
 from datetime import datetime
 from database import save_detection
 from ultralytics import YOLO
@@ -61,6 +63,7 @@ class CameraState:
         self.last_violence_confidence = 0.0
         self.current_threat = "LOW"
         self.cached_boxes = []
+        self.last_audio_alert_time = 0
 
 camera_states = {}
 
@@ -68,6 +71,16 @@ def get_camera_state(cam_id, cam_name="Camera"):
     if cam_id not in camera_states:
         camera_states[cam_id] = CameraState(cam_name)
     return camera_states[cam_id]
+
+def remove_camera(cam_id):
+    if cam_id in camera_states:
+        del camera_states[cam_id]
+        
+    any_critical = any(s.current_threat in ["HIGH", "CRITICAL"] for s in camera_states.values())
+    global robot_dispatch, dispatch_camera
+    robot_dispatch = any_critical
+    if not robot_dispatch:
+        dispatch_camera = None
 
 # ==========================================
 # COLORS
@@ -81,11 +94,9 @@ BLACK = (25, 25, 25)
 # ==========================================
 # THREAT ENGINE
 # ==========================================
-def get_threat_level(count):
-    if count >= 5:
-        return "HIGH", RED
-    elif count >= 3:
-        return "MEDIUM", ORANGE
+def get_threat_level(count, is_violent=False):
+    if is_violent:
+        return "CRITICAL", RED
     return "LOW", GREEN
 
 # ==========================================
@@ -151,6 +162,25 @@ def ai_worker():
                     if state.last_violence_label in VIOLENCE_LABELS:
                         add_detection(state.last_violence_label, round(state.last_violence_confidence * 100, 1), "CRITICAL", state.name)
                         save_detection(label=state.last_violence_label, confidence=round(state.last_violence_confidence * 100, 1), severity="CRITICAL", camera=state.name)
+                        
+                        current_time = time.time()
+                        if current_time - state.last_audio_alert_time > 10:
+                            state.last_audio_alert_time = current_time
+                            def _speak_alert():
+                                try:
+                                    clean_name = state.name.replace(" (Live)", "")
+                                    import platform
+                                    if platform.system() == "Darwin":
+                                        import subprocess
+                                        subprocess.run(['say', f"Violence detected in {clean_name}. [[slnc 600]] {state.last_violence_label}"])
+                                    else:
+                                        engine = pyttsx3.init()
+                                        engine.setProperty('rate', 160)
+                                        engine.say(f"Violence detected in {clean_name}. , , , {state.last_violence_label}")
+                                        engine.runAndWait()
+                                except Exception as e:
+                                    print("Audio alert error:", e)
+                            threading.Thread(target=_speak_alert, daemon=True).start()
 
                 # 2. YOLO Object Detection
                 state.person_count = 0
@@ -166,7 +196,8 @@ def ai_worker():
 
                     if class_name == "person":
                         state.person_count += 1
-                        threat, color = get_threat_level(state.person_count)
+                        is_violent = (state.last_violence_label in VIOLENCE_LABELS)
+                        threat, color = get_threat_level(state.person_count, is_violent)
                         new_boxes.append((coords, confidence, color, class_name))
                         
                         add_detection(class_name, confidence, threat, state.name)
@@ -205,17 +236,19 @@ def detect(frame, camera_id="0", camera_name="Main Gate"):
             draw_box(frame, coords, confidence, color, class_name)
 
         # Threat Assessment
-        threat, _ = get_threat_level(state.person_count)
+        is_violent = (state.last_violence_label in VIOLENCE_LABELS)
+        threat, _ = get_threat_level(state.person_count, is_violent)
         
-        if state.last_violence_label in VIOLENCE_LABELS:
-            threat = "CRITICAL"
+        if is_violent:
             cv2.putText(frame, f"CRITICAL: {state.last_violence_label.upper()}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, RED, 3)
 
         state.current_threat = threat
 
-        # Global robot logic: if ANY camera is high/critical, dispatch robot
+        # Global robot logic: update robot_dispatch dynamically based on all cameras
+        any_critical = any(s.current_threat in ["HIGH", "CRITICAL"] for s in camera_states.values())
+        global robot_dispatch, dispatch_camera
+        robot_dispatch = any_critical
         if threat in ["HIGH", "CRITICAL"]:
-            robot_dispatch = True
             dispatch_camera = camera_name
 
         return frame

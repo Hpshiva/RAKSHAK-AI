@@ -50,7 +50,6 @@ def init_camera():
 
 def generate_webcam_frames():
     global webcam_enabled, camera
-    init_camera()
     while True:
         if not webcam_enabled:
             if camera is not None:
@@ -171,6 +170,13 @@ def login():
         if valid_login:
             session["logged_in"] = True
             session["user"] = email
+            
+            # Handle "Remember me"
+            if request.form.get("remember"):
+                session.permanent = True
+            else:
+                session.permanent = False
+                
             return redirect("/dashboard")
 
         return render_template("login.html", error="Invalid email or password.")
@@ -357,6 +363,8 @@ def video_seek(seconds):
 def video_close():
     global uploaded_video_path
     uploaded_video_path = None
+    import ai.detector as detector
+    detector.remove_camera("upload_1")
     return jsonify({"status": "success"})
 
 initialize_database()
