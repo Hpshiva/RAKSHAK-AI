@@ -23,7 +23,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 uploaded_video_path = None
 
 # Video control states
-webcam_enabled = True
+webcam_enabled = {} # dict of camera_id (int) -> bool
 video_playing = True
 video_seek_request = 0  # in seconds
 
@@ -32,49 +32,64 @@ video_seek_request = 0  # in seconds
 # ====================================
 import platform
 
-camera = None
+cameras = {} # dict of camera_id (int) -> cv2.VideoCapture
 
-def init_camera():
-    global camera
-    if camera is None or not camera.isOpened():
+def get_camera(camera_id):
+    global cameras
+    if camera_id not in cameras or cameras[camera_id] is None or not cameras[camera_id].isOpened():
         if platform.system() == "Windows":
-            camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            cap = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
         else:
-            camera = cv2.VideoCapture(0)
+            cap = cv2.VideoCapture(camera_id)
         
-        if camera is not None and camera.isOpened():
-            print("✅ Camera opened successfully")
+        if cap.isOpened():
+            cameras[camera_id] = cap
+            print(f"✅ Camera {camera_id} opened successfully")
         else:
-            print("⚠️ Running without local camera")
-            camera = None
+            print(f"⚠️ Failed to open camera {camera_id}")
+            cameras[camera_id] = None
+            
+    return cameras[camera_id]
 
-def generate_webcam_frames():
-    global webcam_enabled, camera
+def generate_webcam_frames(camera_id=0):
+    global webcam_enabled, cameras
+    
+    # Initialize state if not present
+    if camera_id not in webcam_enabled:
+        webcam_enabled[camera_id] = True
+        
     while True:
-        if not webcam_enabled:
-            if camera is not None:
-                camera.release()
-                camera = None
+        if not webcam_enabled.get(camera_id, True):
+            if camera_id in cameras and cameras[camera_id] is not None:
+                cameras[camera_id].release()
+                cameras[camera_id] = None
             import time
             import numpy as np
             blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-            cv2.putText(blank_frame, "Camera Disabled", (170, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(blank_frame, f"Camera {camera_id} Disabled", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
             ret, buffer = cv2.imencode(".jpg", blank_frame)
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
             time.sleep(0.5)
             continue
             
-        if camera is None:
-            init_camera()
+        cap = get_camera(camera_id)
             
-        if camera is None:
-            break
-        success, frame = camera.read()
+        if cap is None:
+            import time
+            import numpy as np
+            blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(blank_frame, f"Camera {camera_id} Not Found", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            ret, buffer = cv2.imencode(".jpg", blank_frame)
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            time.sleep(1)
+            continue
+            
+        success, frame = cap.read()
         if not success:
             continue
 
-        # Detect uses cam_id=0 for webcam
-        frame = detect(frame, camera_id="0", camera_name="Webcam (Live)")
+        # Detect uses cam_id for tracking threats independently
+        frame = detect(frame, camera_id=str(camera_id), camera_name=f"Webcam {camera_id} (Live)")
 
         ret, buffer = cv2.imencode(".jpg", frame)
         if not ret:
@@ -283,12 +298,35 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route("/camera_feed")
-def camera_feed():
+@app.route("/camera_feed/<int:camera_id>")
+def camera_feed(camera_id):
     return Response(
-        generate_webcam_frames(),
+        generate_webcam_frames(camera_id),
         mimetype="multipart/x-mixed-replace; boundary=frame"
     )
+
+@app.route("/api/cameras")
+def get_cameras():
+    # Scan for connected cameras (0 to 3 to keep it fast on macOS)
+    available_cams = []
+    import platform
+    for i in range(4):
+        if platform.system() == "Windows":
+            cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+        else:
+            cap = cv2.VideoCapture(i)
+            
+        if cap.isOpened():
+            ret, _ = cap.read()
+            if ret:
+                available_cams.append(i)
+            cap.release()
+            
+    # Default to [0] if none found so the UI doesn't break
+    if not available_cams:
+        available_cams = [0]
+        
+    return jsonify({"cameras": available_cams})
 
 @app.route("/upload_video", methods=["POST"])
 def upload_video():
@@ -338,8 +376,13 @@ def api_stats():
 @app.route("/api/toggle_webcam", methods=["POST"])
 def toggle_webcam():
     global webcam_enabled
-    webcam_enabled = not webcam_enabled
-    return jsonify({"status": "success", "webcam_enabled": webcam_enabled})
+    data = request.get_json() or {}
+    camera_id = data.get("camera_id", 0)
+    
+    current_state = webcam_enabled.get(camera_id, True)
+    webcam_enabled[camera_id] = not current_state
+    
+    return jsonify({"status": "success", "camera_id": camera_id, "webcam_enabled": webcam_enabled[camera_id]})
 
 @app.route("/api/video/play", methods=["POST"])
 def video_play():

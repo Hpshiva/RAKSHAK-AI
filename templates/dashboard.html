@@ -223,22 +223,8 @@
     <div class="main-content">
         <div class="video-grid">
             
-            <!-- Webcam -->
-            <div class="video-card">
-                <div class="video-header" style="justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="live-dot" id="webcam-dot"></div>
-                        Webcam (Live)
-                    </div>
-                    <div>
-                        <button onclick="toggleWebcam(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Turn Off</button>
-                        <button onclick="toggleFullscreen(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Fullscreen</button>
-                    </div>
-                </div>
-                <div class="video-container" style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; display: flex; flex-direction: column; overflow: hidden;">
-                    <img src="/camera_feed" class="video-feed" alt="Webcam" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-            </div>
+            <!-- Dynamic Webcams will be injected here via JS -->
+            <div id="dynamic-cameras-container" style="display: contents;"></div>
 
             <!-- Video Upload -->
             <div class="video-card" style="padding: 20px; display: flex; align-items: center; justify-content: center; background: #fff;">
@@ -293,16 +279,56 @@
     </div>
 
     <script>
+        // Initialize Dynamic Cameras
+        async function loadCameras() {
+            try {
+                const res = await fetch('/api/cameras');
+                const data = await res.json();
+                const container = document.getElementById('dynamic-cameras-container');
+                
+                data.cameras.forEach(camId => {
+                    const card = document.createElement('div');
+                    card.className = 'video-card';
+                    card.innerHTML = `
+                        <div class="video-header" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div class="live-dot" id="webcam-dot-${camId}"></div>
+                                Webcam ${camId} (Live)
+                            </div>
+                            <div>
+                                <button onclick="toggleWebcam(this, ${camId})" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Turn Off</button>
+                                <button onclick="toggleFullscreen(this)" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px;">Fullscreen</button>
+                            </div>
+                        </div>
+                        <div class="video-container" style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; display: flex; flex-direction: column; overflow: hidden;">
+                            <img src="/camera_feed/${camId}" class="video-feed" alt="Webcam ${camId}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Failed to load cameras", err);
+            }
+        }
+        
+        loadCameras();
+
         // Advanced Video Controls
-        async function toggleWebcam(btn) {
-            const res = await fetch('/api/toggle_webcam', { method: 'POST' });
+        async function toggleWebcam(btn, camId) {
+            const res = await fetch('/api/toggle_webcam', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ camera_id: camId })
+            });
             const data = await res.json();
             if (data.webcam_enabled) {
                 btn.textContent = "Turn Off";
-                document.getElementById('webcam-dot').style.display = 'block';
+                document.getElementById('webcam-dot-' + camId).style.display = 'block';
             } else {
                 btn.textContent = "Turn On";
-                document.getElementById('webcam-dot').style.display = 'none';
+                document.getElementById('webcam-dot-' + camId).style.display = 'none';
             }
         }
 
