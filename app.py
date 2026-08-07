@@ -26,6 +26,9 @@ uploaded_video_path = None
 webcam_enabled = {} # dict of camera_id (int) -> bool
 video_playing = True
 video_seek_request = 0  # in seconds
+video_seek_absolute = None # in seconds
+video_current_time = 0.0 # in seconds
+video_duration = 0.0 # in seconds
 
 # ====================================
 # Video Streams
@@ -104,7 +107,7 @@ def generate_webcam_frames(camera_id=0):
         )
 
 def generate_uploaded_video_frames():
-    global uploaded_video_path, video_playing, video_seek_request
+    global uploaded_video_path, video_playing, video_seek_request, video_seek_absolute, video_current_time, video_duration
     
     last_frame_bytes = None
     
@@ -123,12 +126,22 @@ def generate_uploaded_video_frames():
         if fps == 0 or fps != fps:
             fps = 30
             
+        video_duration = cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps
+            
         while uploaded_video_path is not None:
-            if video_seek_request != 0:
+            if video_seek_absolute is not None:
+                new_frame = video_seek_absolute * fps
+                cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, min(new_frame, cap.get(cv2.CAP_PROP_FRAME_COUNT) - 1)))
+                video_seek_absolute = None
+                video_seek_request = 0
+
+            elif video_seek_request != 0:
                 current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
                 new_frame = current_frame + (video_seek_request * fps)
-                cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, new_frame))
+                cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, min(new_frame, cap.get(cv2.CAP_PROP_FRAME_COUNT) - 1)))
                 video_seek_request = 0
+                
+            video_current_time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
                 
             if not video_playing:
                 import time
@@ -409,6 +422,23 @@ def video_close():
     import ai.detector as detector
     detector.remove_camera("upload_1")
     return jsonify({"status": "success"})
+
+@app.route("/api/video_progress")
+def api_video_progress():
+    return jsonify({
+        "current": video_current_time,
+        "total": video_duration,
+        "playing": video_playing
+    })
+
+@app.route("/api/video_seek_absolute", methods=["POST"])
+def api_video_seek_absolute():
+    global video_seek_absolute
+    data = request.get_json() or {}
+    seek_time = data.get("time")
+    if seek_time is not None:
+        video_seek_absolute = float(seek_time)
+    return jsonify({"status": "ok"})
 
 initialize_database()
 

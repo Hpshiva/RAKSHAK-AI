@@ -1,5 +1,5 @@
 model-settings:
-  prediction-threshold: 0.23
+  prediction-threshold: 0.20
   model-name: "ViT-L-14"
   pretrained: "openai"
   device: "cpu"

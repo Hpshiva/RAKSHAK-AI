@@ -976,10 +976,6 @@ grid-template-columns:1fr;
 
 }
 
-}
-
-@media(max-width:576px){
-
 .dashboard{
 
 grid-template-columns:1fr;
@@ -987,22 +983,23 @@ grid-template-columns:1fr;
 }
 
 .sidebar{
-    width:260px;
-    background: #FFFFFF;
-    border-right: 1px solid var(--border);
+    width:100%;
+    height:auto;
+    position:static;
+    border-right:none;
+    border-top:1px solid var(--border);
     padding:20px 15px;
-    display:flex;
-    flex-direction:column;
-    height:100vh;
-    position:sticky;
-    top:0;
-    z-index:100;
-    transition: width 0.3s ease;
 }
+
+}
+
+@media(max-width:576px){
 
 .logo{
 
     justify-content:center;
+
+}
 
 }
 

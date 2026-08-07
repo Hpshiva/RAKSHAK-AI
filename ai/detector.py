@@ -47,7 +47,7 @@ dispatch_camera = None
 
 # Labels considered violent or threatening
 VIOLENCE_LABELS = {
-    'fight on a street', 'street violence', 'violence in office', 'fire in office',
+    'fight on a street', 'street violence', 'violence in office', 'fire in office', 'fire on a street',
     'person holding a gun', 'person holding a knife', 'weapon', 'armed robbery',
     'physical assault', 'explosion'
 }
@@ -183,11 +183,11 @@ def ai_worker():
                             threading.Thread(target=_speak_alert, daemon=True).start()
 
                 # 2. YOLO Object Detection
-                state.person_count = 0
-                results = model.predict(source=frame, conf=0.45, imgsz=640, verbose=False)
+                results = model.predict(source=frame, conf=0.85, imgsz=640, verbose=False)
                 result = results[0]
 
                 new_boxes = []
+                current_person_count = 0
                 for box in result.boxes:
                     cls = int(box.cls[0])
                     class_name = model.names[cls]
@@ -195,9 +195,9 @@ def ai_worker():
                     coords = tuple(map(int, box.xyxy[0]))
 
                     if class_name == "person":
-                        state.person_count += 1
+                        current_person_count += 1
                         is_violent = (state.last_violence_label in VIOLENCE_LABELS)
-                        threat, color = get_threat_level(state.person_count, is_violent)
+                        threat, color = get_threat_level(current_person_count, is_violent)
                         new_boxes.append((coords, confidence, color, class_name))
                         
                         add_detection(class_name, confidence, threat, state.name)
@@ -205,6 +205,7 @@ def ai_worker():
                     else:
                         new_boxes.append((coords, confidence, GREEN, class_name))
                 
+                state.person_count = current_person_count
                 state.cached_boxes = new_boxes
             except Exception as e:
                 print(f"AI Worker Error on cam {cid}:", e)
