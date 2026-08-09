@@ -6,6 +6,7 @@ import pyttsx3
 from datetime import datetime
 from database import save_detection
 from ultralytics import YOLO
+from ai.face_recognition import FaceRecognizer
 
 # ==========================================
 # LOAD YOLO MODEL
@@ -26,6 +27,12 @@ print(" Loading Violence Detection Model...")
 violence_model = Model()
 print(" Violence Detection Model Loaded Successfully")
 
+print(" Loading Face Recognition Model...")
+face_recognizer = FaceRecognizer()
+faces_dir = os.path.join(BASE_DIR, "faces")
+os.makedirs(faces_dir, exist_ok=True)
+face_recognizer.load_faces(faces_dir)
+
 print("======================================\n")
 
 # ==========================================
@@ -41,9 +48,10 @@ latest_frames_for_ai = {}
 detections = []
 MAX_DETECTIONS = 15
 
-# Global robot status
+# Global tracking
 robot_dispatch = False
 dispatch_camera = None
+global_last_screenshot_time = 0
 
 # Labels considered violent or threatening
 VIOLENCE_LABELS = {
@@ -64,6 +72,9 @@ class CameraState:
         self.current_threat = "LOW"
         self.cached_boxes = []
         self.last_audio_alert_time = 0
+        self.screenshot_count_this_event = 0
+        self.last_violence_time = 0
+        self.last_screenshot_trigger_time = 0
 
 camera_states = {}
 
@@ -160,23 +171,70 @@ def ai_worker():
                     state.last_violence_confidence = violence_prediction['confidence']
                     
                     if state.last_violence_label in VIOLENCE_LABELS:
+                        
+                        # Use Face Recognition to identify attackers
+                        recognized_faces = face_recognizer.recognize_faces(frame)
+                        attacker_info = ""
+                        if recognized_faces:
+                            # Filter out duplicates and format
+                            unique_names = list(set(f["name"] for f in recognized_faces if f["name"] != "Unknown"))
+                            if unique_names:
+                                names_str = ", ".join(unique_names)
+                                if state.last_violence_label.startswith("person "):
+                                    state.last_violence_label = f"{names_str} " + state.last_violence_label[7:]
+                                else:
+                                    state.last_violence_label = f"{names_str} involved in {state.last_violence_label}"
+
                         add_detection(state.last_violence_label, round(state.last_violence_confidence * 100, 1), "CRITICAL", state.name)
                         save_detection(label=state.last_violence_label, confidence=round(state.last_violence_confidence * 100, 1), severity="CRITICAL", camera=state.name)
                         
                         current_time = time.time()
+                        
+                        # Reset screenshot count if 60 seconds have passed since last violence (new event)
+                        if current_time - state.last_violence_time > 60:
+                            state.screenshot_count_this_event = 0
+                        
+                        state.last_violence_time = current_time
+                        
+                        # Only save max 2 screenshots per violence event, separated by at least 2 seconds
+                        if state.screenshot_count_this_event < 2 and (current_time - state.last_screenshot_trigger_time > 2):
+                            state.last_screenshot_trigger_time = current_time
+                            try:
+                                snapshot_dir = os.path.dirname(BASE_DIR) # Points to 'rakshak ai'
+                                os.makedirs(snapshot_dir, exist_ok=True)
+                                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                                clean_cam_name = state.name.replace(" ", "_").replace("(", "").replace(")", "")
+                                filename = f"violence_{clean_cam_name}_{timestamp}.jpg"
+                                filepath = os.path.join(snapshot_dir, filename)
+                                cv2.imwrite(filepath, frame)
+                                
+                                # Save to DB
+                                from database import save_snapshot
+                                save_snapshot(filepath)
+                                global global_last_screenshot_time
+                                global_last_screenshot_time = current_time
+                                state.screenshot_count_this_event += 1
+                                print(f"📸 Saved violence screenshot {state.screenshot_count_this_event}/2: {filepath}")
+                            except Exception as e:
+                                print(f"Error saving screenshot: {e}")
+                        
                         if current_time - state.last_audio_alert_time > 10:
                             state.last_audio_alert_time = current_time
+                                
                             def _speak_alert():
                                 try:
                                     clean_name = state.name.replace(" (Live)", "")
+                                    
+                                    # Format the spoken text to sound more natural
+                                    spoken_text = state.last_violence_label
                                     import platform
                                     if platform.system() == "Darwin":
                                         import subprocess
-                                        subprocess.run(['say', f"Violence detected in {clean_name}. [[slnc 600]] {state.last_violence_label}"])
+                                        subprocess.run(['say', f"Violence detected. [[slnc 600]] {spoken_text}"])
                                     else:
                                         engine = pyttsx3.init()
                                         engine.setProperty('rate', 160)
-                                        engine.say(f"Violence detected in {clean_name}. , , , {state.last_violence_label}")
+                                        engine.say(f"Violence detected. , , , {spoken_text}")
                                         engine.runAndWait()
                                 except Exception as e:
                                     print("Audio alert error:", e)
@@ -188,6 +246,13 @@ def ai_worker():
 
                 new_boxes = []
                 current_person_count = 0
+                
+                # Run face recognition if there's any person
+                has_person = any(model.names[int(box.cls[0])] == "person" for box in result.boxes)
+                recognized_faces = []
+                if has_person:
+                    recognized_faces = face_recognizer.recognize_faces(frame)
+
                 for box in result.boxes:
                     cls = int(box.cls[0])
                     class_name = model.names[cls]
@@ -196,6 +261,19 @@ def ai_worker():
 
                     if class_name == "person":
                         current_person_count += 1
+                        
+                        # Match face bounding box to person bounding box
+                        for face_data in recognized_faces:
+                            fx1, fy1, fx2, fy2 = face_data['bbox']
+                            x1, y1, x2, y2 = coords
+                            cx = (fx1 + fx2) / 2
+                            cy = (fy1 + fy2) / 2
+                            # If face center is inside person bbox
+                            if x1 <= cx <= x2 and y1 <= cy <= y2:
+                                if face_data['name'] != "Unknown":
+                                    class_name = face_data['name']
+                                break
+
                         is_violent = (state.last_violence_label in VIOLENCE_LABELS)
                         threat, color = get_threat_level(current_person_count, is_violent)
                         new_boxes.append((coords, confidence, color, class_name))
@@ -277,7 +355,8 @@ def get_robot_status():
         "dispatch": robot_dispatch,
         "camera": dispatch_camera,
         "threat": highest_threat,
-        "people": total_people
+        "people": total_people,
+        "last_screenshot_time": global_last_screenshot_time
     }
 
 # ==========================================

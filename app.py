@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, jsonify, request, redirect, session
+from flask import Flask, render_template, Response, jsonify, request, redirect, session, send_from_directory
 import cv2
 import os
 import random
@@ -19,6 +19,10 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'upload
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+FACES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'faces')
+os.makedirs(FACES_FOLDER, exist_ok=True)
+app.config['FACES_FOLDER'] = FACES_FOLDER
+
 # Global variable to store the path of the uploaded video
 uploaded_video_path = None
 
@@ -35,76 +39,153 @@ video_duration = 0.0 # in seconds
 # ====================================
 import platform
 
-cameras = {} # dict of camera_id (int) -> cv2.VideoCapture
+import threading
+
+class ZeroLatencyCamera:
+    """
+    Constantly grabs frames in the background to ensure the AI always 
+    processes the absolute latest frame with zero delay/buffer lag.
+    """
+    def __init__(self, camera_id):
+        if platform.system() == "Windows":
+            self.capture = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
+        else:
+            self.capture = cv2.VideoCapture(camera_id)
+            
+        self.latest_frame = None
+        self.running = self.capture.isOpened()
+        
+        if self.running:
+            self.thread = threading.Thread(target=self._update, daemon=True)
+            self.thread.start()
+
+    def _update(self):
+        while self.running:
+            ret, frame = self.capture.read()
+            if ret:
+                self.latest_frame = frame
+            else:
+                import time
+                time.sleep(0.1) # Wait for Mac camera to warm up
+
+    def read(self):
+        if self.latest_frame is not None:
+            return True, self.latest_frame
+        return False, None
+
+    def release(self):
+        self.running = False
+        if hasattr(self, 'thread'):
+            self.thread.join(timeout=1.0)
+        self.capture.release()
+        self.latest_frame = None
+
+    def isOpened(self):
+        return self.capture.isOpened()
+
+cameras = {} # dict of camera_id (int) -> ZeroLatencyCamera
 
 def get_camera(camera_id):
     global cameras
     if camera_id not in cameras or cameras[camera_id] is None or not cameras[camera_id].isOpened():
-        if platform.system() == "Windows":
-            cap = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
-        else:
-            cap = cv2.VideoCapture(camera_id)
+        cap = ZeroLatencyCamera(camera_id)
         
         if cap.isOpened():
             cameras[camera_id] = cap
-            print(f"✅ Camera {camera_id} opened successfully")
+            print(f"✅ Zero-Latency Camera {camera_id} opened successfully")
         else:
             print(f"⚠️ Failed to open camera {camera_id}")
             cameras[camera_id] = None
             
     return cameras[camera_id]
 
+active_viewers = {} # dict of camera_id (int) -> int
+
 def generate_webcam_frames(camera_id=0):
-    global webcam_enabled, cameras
+    global webcam_enabled, cameras, active_viewers
     
     # Initialize state if not present
     if camera_id not in webcam_enabled:
         webcam_enabled[camera_id] = True
         
-    while True:
-        if not webcam_enabled.get(camera_id, True):
+    if camera_id not in active_viewers:
+        active_viewers[camera_id] = 0
+    active_viewers[camera_id] += 1
+        
+    try:
+        loading_count = 0
+        while True:
+            if not webcam_enabled.get(camera_id, True):
+                if camera_id in cameras and cameras[camera_id] is not None:
+                    cameras[camera_id].release()
+                    cameras[camera_id] = None
+                import time
+                import numpy as np
+                blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(blank_frame, f"Camera {camera_id} Disabled", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                ret, buffer = cv2.imencode(".jpg", blank_frame)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                time.sleep(0.5)
+                continue
+                
+            cap = get_camera(camera_id)
+                
+            if cap is None:
+                import time
+                import numpy as np
+                blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(blank_frame, f"Camera {camera_id} Not Found", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                ret, buffer = cv2.imencode(".jpg", blank_frame)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                time.sleep(1)
+                continue
+                
+            success, frame = cap.read()
+            if not success:
+                import time
+                time.sleep(0.1)
+                loading_count += 1
+                # Yield a loading frame every 500ms so Flask can detect if client disconnects
+                if loading_count >= 5:
+                    import numpy as np
+                    blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                    cv2.putText(blank_frame, f"Waking up Camera {camera_id}...", (100, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                    ret, buffer = cv2.imencode(".jpg", blank_frame)
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    loading_count = 0
+                continue
+            
+            # Reset loading count if successful
+            loading_count = 0
+
+            # Detect uses cam_id for tracking threats independently
+            frame = detect(frame, camera_id=str(camera_id), camera_name=f"Webcam {camera_id} (Live)")
+
+            ret, buffer = cv2.imencode(".jpg", frame)
+            if not ret:
+                continue
+
+            frame_bytes = buffer.tobytes()
+            yield (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' +
+                frame_bytes +
+                b'\r\n'
+            )
+            
+            # CRITICAL: Prevent 10,000 FPS infinite loop!
+            # Since ZeroLatencyCamera is non-blocking, we must pace the output to ~30 FPS
+            import time
+            time.sleep(0.033)
+            
+    finally:
+        active_viewers[camera_id] -= 1
+        if active_viewers[camera_id] <= 0:
+            active_viewers[camera_id] = 0
             if camera_id in cameras and cameras[camera_id] is not None:
+                print(f"🛑 No active viewers. Turning off Camera {camera_id}")
                 cameras[camera_id].release()
                 cameras[camera_id] = None
-            import time
-            import numpy as np
-            blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-            cv2.putText(blank_frame, f"Camera {camera_id} Disabled", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            ret, buffer = cv2.imencode(".jpg", blank_frame)
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-            time.sleep(0.5)
-            continue
-            
-        cap = get_camera(camera_id)
-            
-        if cap is None:
-            import time
-            import numpy as np
-            blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-            cv2.putText(blank_frame, f"Camera {camera_id} Not Found", (130, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            ret, buffer = cv2.imencode(".jpg", blank_frame)
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-            time.sleep(1)
-            continue
-            
-        success, frame = cap.read()
-        if not success:
-            continue
-
-        # Detect uses cam_id for tracking threats independently
-        frame = detect(frame, camera_id=str(camera_id), camera_name=f"Webcam {camera_id} (Live)")
-
-        ret, buffer = cv2.imencode(".jpg", frame)
-        if not ret:
-            continue
-
-        frame_bytes = buffer.tobytes()
-        yield (
-            b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n' +
-            frame_bytes +
-            b'\r\n'
-        )
 
 def generate_uploaded_video_frames():
     global uploaded_video_path, video_playing, video_seek_request, video_seek_absolute, video_current_time, video_duration
@@ -306,6 +387,12 @@ def dashboard():
     
     return render_template("dashboard.html", has_uploaded_video=(uploaded_video_path is not None))
 
+@app.route("/about")
+def about():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("about.html")
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -320,26 +407,10 @@ def camera_feed(camera_id):
 
 @app.route("/api/cameras")
 def get_cameras():
-    # Scan for connected cameras (0 to 3 to keep it fast on macOS)
-    available_cams = []
-    import platform
-    for i in range(4):
-        if platform.system() == "Windows":
-            cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
-        else:
-            cap = cv2.VideoCapture(i)
-            
-        if cap.isOpened():
-            ret, _ = cap.read()
-            if ret:
-                available_cams.append(i)
-            cap.release()
-            
-    # Default to [0] if none found so the UI doesn't break
-    if not available_cams:
-        available_cams = [0]
-        
-    return jsonify({"cameras": available_cams})
+    # Force use of only the primary camera [0]
+    # Scanning (0-3) on macOS often accidentally wakes up sleeping iPhones (Continuity Camera)
+    # or virtual cameras, which results in phantom "grey box" video feeds on the dashboard.
+    return jsonify({"cameras": [0]})
 
 @app.route("/upload_video", methods=["POST"])
 def upload_video():
@@ -439,6 +510,70 @@ def api_video_seek_absolute():
     if seek_time is not None:
         video_seek_absolute = float(seek_time)
     return jsonify({"status": "ok"})
+
+@app.route("/faces")
+def faces():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("faces.html")
+
+@app.route("/api/upload_face", methods=["POST"])
+def upload_face():
+    if "file" not in request.files or "name" not in request.form:
+        return jsonify({"error": "Missing file or name"}), 400
+        
+    file = request.files["file"]
+    name = request.form["name"].strip()
+    
+    if file.filename == "" or not name:
+        return jsonify({"error": "Invalid file or name"}), 400
+        
+    filename = secure_filename(f"{name}_{file.filename}")
+    filepath = os.path.join(app.config["FACES_FOLDER"], filename)
+    file.save(filepath)
+    
+    # Reload the face recognizer
+    try:
+        from ai.detector import face_recognizer
+        face_recognizer.load_faces(app.config["FACES_FOLDER"])
+    except Exception as e:
+        print("Error reloading faces:", e)
+        
+    return jsonify({"status": "success", "filename": filename})
+
+@app.route("/api/faces")
+def api_faces():
+    faces_list = []
+    if os.path.exists(app.config["FACES_FOLDER"]):
+        for filename in os.listdir(app.config["FACES_FOLDER"]):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                # name is usually everything before the last underscore, 
+                # but because we formatted it as {name}_{original}, we can just split.
+                parts = filename.split('_')
+                name = parts[0] if len(parts) > 1 else filename.split('.')[0]
+                faces_list.append({"name": name, "filename": filename})
+    return jsonify(faces_list)
+
+@app.route("/api/delete_face", methods=["POST"])
+def delete_face():
+    data = request.get_json()
+    filename = data.get("filename")
+    if filename:
+        filepath = os.path.join(app.config["FACES_FOLDER"], secure_filename(filename))
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            # Reload faces
+            try:
+                from ai.detector import face_recognizer
+                face_recognizer.load_faces(app.config["FACES_FOLDER"])
+            except:
+                pass
+            return jsonify({"status": "deleted"})
+    return jsonify({"error": "File not found"}), 404
+
+@app.route("/faces_img/<filename>")
+def faces_img(filename):
+    return send_from_directory(app.config["FACES_FOLDER"], filename)
 
 initialize_database()
 

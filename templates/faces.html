@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - Known Faces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Top navigation */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.1);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 100px auto 40px;
+            padding: 0 20px;
+        }
+
+        .upload-card {
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .faces-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .face-card {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .face-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .face-info {
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .face-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        .alert-toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 99px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 1000;
+        }
+
+    </style>
+</head>
+<body>
+    
+    <div class="topbar">
+        <h1>RAKSHAK AI</h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="/dashboard" class="btn-glass"><i class="fa-solid fa-desktop"></i> Dashboard</a>
+            <a href="/about" class="btn-glass"><i class="fa-solid fa-circle-info"></i> About SOP</a>
+            <a href="/logout" class="btn-glass">Log Out</a>
+        </div>
+    </div>
+
+    <div class="alert-toast" id="alertToast">Face successfully added!</div>
+
+    <div class="container">
+        <h2 style="margin-bottom: 10px;"><i class="fa-solid fa-users"></i> Known Faces Database</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 30px;">
+            Upload photos of students and staff. When violence is detected, the AI will use facial recognition to identify the attacker.
+        </p>
+
+        <div class="upload-card">
+            <h3 style="margin-bottom: 20px;">Add New Face</h3>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="personName">Full Name</label>
+                    <input type="text" id="personName" name="name" placeholder="e.g. John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="personPhoto">Clear Photo (Front Facing)</label>
+                    <input type="file" id="personPhoto" name="file" accept="image/jpeg, image/png, image/jpg" required>
+                </div>
+                <button type="submit" class="btn-primary"><i class="fa-solid fa-upload"></i> Upload & Train AI</button>
+            </form>
+        </div>
+
+        <h3 style="margin-bottom: 20px;">Currently Registered Faces</h3>
+        <div class="faces-grid" id="facesGrid">
+            <!-- Populated via JS -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/upload_face', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if(response.ok) {
+                    document.getElementById('uploadForm').reset();
+                    showToast('Face successfully added!');
+                    loadFaces();
+                } else {
+                    const err = await response.json();
+                    alert("Error: " + (err.error || "Could not upload face."));
+                }
+            } catch (err) {
+                alert("Network error occurred.");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+
+        async function loadFaces() {
+            try {
+                const response = await fetch('/api/faces');
+                const faces = await response.json();
+                
+                const grid = document.getElementById('facesGrid');
+                grid.innerHTML = '';
+                
+                if (faces.length === 0) {
+                    grid.innerHTML = '<p style="color: #64748b; grid-column: 1/-1;">No faces registered yet. Upload one above!</p>';
+                    return;
+                }
+
+                faces.forEach(face => {
+                    const card = document.createElement('div');
+                    card.className = 'face-card';
+                    card.innerHTML = `
+                        <button class="delete-btn" onclick="deleteFace('${face.filename}')" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        <img src="/faces_img/${face.filename}" alt="${face.name}">
+                        <div class="face-info">
+                            <div class="face-name">${face.name}</div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Failed to load faces:", err);
+            }
+        }
+
+        async function deleteFace(filename) {
+            if(!confirm("Are you sure you want to delete this face?")) return;
+            
+            try {
+                const response = await fetch('/api/delete_face', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename: filename})
+                });
+                
+                if(response.ok) {
+                    showToast('Face deleted!');
+                    loadFaces();
+                }
+            } catch (err) {
+                alert("Error deleting face");
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('alertToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load initially
+        loadFaces();
+    </script>
+</body>
+</html>

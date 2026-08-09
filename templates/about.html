@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - System SOP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Mermaid.js for flowchart diagram -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Top navigation */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+
+        /* Glass Button */
+        .btn-glass {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 9999px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.2) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #1f2937;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-glass:hover {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%);
+            transform: translateY(-1px);
+        }
+
+        /* Content Container */
+        .container {
+            max-width: 900px;
+            margin: 100px auto 40px auto;
+            padding: 40px;
+            background: var(--panel-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        h1.title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: #334155;
+        }
+
+        p {
+            line-height: 1.7;
+            margin-bottom: 15px;
+            color: #475569;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+            line-height: 1.7;
+            color: #475569;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .alert-box {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            color: #1e3a8a;
+        }
+
+        .diagram-container {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>RAKSHAK AI <span style="font-size: 0.9rem; color: var(--text-secondary); margin-left: 10px;">| Standard Operating Procedure</span></h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="/dashboard" class="btn-glass"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">System Architecture & SOP</h1>
+        <p class="subtitle">A complete guide to understanding how Rakshak AI protects the campus.</p>
+
+        <h2>1. Introduction to Rakshak AI</h2>
+        <p>Rakshak AI is an advanced, real-time computer vision security system designed to protect students and staff. Instead of a human security guard staring at a dozen camera feeds all day, Rakshak AI uses artificial intelligence to "watch" the cameras. If it sees something dangerous—like a weapon, a fire, or a physical assault—it immediately triggers alarms, logs the incident, and can even dispatch a security robot.</p>
+        
+        <h2>2. Core Components</h2>
+        <p>The system is broken down into three main pieces working seamlessly together:</p>
+        <ul>
+            <li><strong>The Web Server (The Brain):</strong> This handles user logins, manages the dashboard interface, and communicates with the cameras. It is built using a technology called Flask.</li>
+            <li><strong>The AI Engine (The Eyes):</strong> This processes the video feeds frame-by-frame. It uses "YOLO" (You Only Look Once) to identify objects like people and weapons, and a custom Violence Model to recognize actions like fighting.</li>
+            <li><strong>The Identity Database (The Watchlist):</strong> Uses an advanced Face Recognition engine to instantly cross-reference people on camera with your uploaded database of Known Faces, extracting their digital facial map.</li>
+            <li><strong>The Central Database (The Memory):</strong> This is a secure digital ledger (SQLite) that permanently records every single threat detected, saving the date, time, camera location, the name of the attacker, and the severity level.</li>
+        </ul>
+
+        <h2>3. System Flowchart (Session Chart)</h2>
+        <p>The diagram below shows exactly what happens to the video data from the moment it leaves the camera to the moment it appears on your screen.</p>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+                graph TD
+                    A[Security Camera] -->|Video Feed| B(Zero-Latency Engine)
+                    B -->|Instant Frame| C{AI Engine Worker}
+                    C -->|Object Detection| D[YOLOv8 Model]
+                    C -->|Action Recognition| E[Violence Model]
+                    D --> F[Face Recognition DB]
+                    E --> G[Threat Assessment]
+                    F -->|Identifies Person| G
+                    G -->|Critical Threat!| H[Trigger Smart Audio Alarm]
+                    G -->|Log Identity & Incident| I[(SQLite Database)]
+                    G -->|Draw Named Bounding Boxes| J[Web Dashboard]
+            </div>
+        </div>
+
+        <h2>4. How it Works: A Real-World Example</h2>
+        <p>Let's walk through an example of what happens if a fight breaks out on campus:</p>
+        <div class="alert-box">
+            <strong>Example Scenario:</strong> Two known students, Shrishail and John, begin physically assaulting each other in the Main Hallway.
+            <ol style="margin-top: 10px; margin-left: 20px;">
+                <li><strong>Capture:</strong> The Main Hallway camera captures the video. The <i>Zero-Latency Engine</i> instantly grabs the newest frame, ensuring there is zero lag.</li>
+                <li><strong>Analysis & Identification:</strong> 
+                    <ul>
+                        <li>The YOLO model recognizes that there are two "Persons" in the frame.</li>
+                        <li>The Violence Model analyzes their posture and identifies the action as "Physical Assault".</li>
+                        <li>The Face Recognition Engine scans their faces, extracts their facial structure, and matches them to the "Known Faces" database as Shrishail and John.</li>
+                    </ul>
+                </li>
+                <li><strong>Response:</strong> 
+                    <ul>
+                        <li>The system draws green bounding boxes displaying their names directly on the live video feed.</li>
+                        <li>It logs exactly who committed the violence in the Database.</li>
+                        <li>It triggers the school's PA system to announce intelligently: "Violence detected. Shrishail, John involved in Physical Assault".</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2>5. Security & Privacy</h2>
+        <p>Because Rakshak AI controls campus security, protecting both the system and the privacy of the students is our highest priority.</p>
+        <ul>
+            <li><strong>100% Local Processing (No Cloud):</strong> Unlike many security systems, Rakshak AI processes all video feeds, action recognition, and facial embeddings entirely on your local machine. No video data or student identities are ever sent to the internet or external cloud servers, ensuring strict compliance with student privacy laws.</li>
+            <li><strong>Secure Login:</strong> Administrators must enter a verified Username and Password to access the live feeds, threat logs, and the Identity Database.</li>
+            <li><strong>Forgot Password & OTP:</strong> If an administrator forgets their password, they cannot simply reset it with a click. The system uses a highly secure Two-Factor Authentication (2FA) mechanism. When a password reset is requested, a unique One-Time Password (OTP) is generated and sent to the administrator's registered email address. The administrator must enter this exact OTP into the system to verify their identity before they are allowed to create a new password. This ensures that unauthorized users cannot hijack the security dashboard.</li>
+        </ul>
+
+        <h2>6. Technical Concepts (Simplified)</h2>
+        <h3>Zero-Latency Camera</h3>
+        <p>Normally, web video streams have a 3 to 5-second delay because the computer "buffers" the video to make it smooth. In an emergency, a 5-second delay is too long. We built a custom "Zero-Latency" module that forces the camera to throw away old frames and <i>only</i> send the absolute newest picture, giving you real-time feedback with 0 seconds of lag.</p>
+
+        <h3>YOLO Object Detection</h3>
+        <p>YOLO stands for "You Only Look Once". It is an AI model that acts like a highly trained speed-reader for images. Instead of scanning an image slowly from left to right, it looks at the entire picture all at once and instantly draws boxes around everything it recognizes (like people, bags, or weapons).</p>
+
+        <h3>Facial Embeddings (InsightFace)</h3>
+        <p>When you upload a photo to the Known Faces dashboard, the AI doesn't just "remember" the picture. Instead, it extracts a 128-dimensional "embedding"—which is basically a mathematical map of the distances between the eyes, nose, and jawline. When a person steps in front of the live camera, the AI generates a new map and calculates the difference between the two maps. If they match closely, it immediately identifies the person, even if they are wearing glasses or looking away.</p>
+
+        <h3>Action Recognition (Violence Model)</h3>
+        <p>While YOLO is good at finding <i>objects</i>, it doesn't understand <i>actions</i>. To fix this, Rakshak AI uses a secondary model that analyzes the context of the entire frame. If two people are standing close to each other, it uses deep learning to determine if they are hugging, talking, or fighting.</p>
+        
+        <h2>7. System Requirements</h2>
+        <p>To run Rakshak AI smoothly with all AI models (YOLO + Violence Detection + Face Recognition) operating in real-time, the following hardware is recommended:</p>
+        <ul>
+            <li><strong>Processor (CPU):</strong> A modern multi-core processor (Apple M1/M2/M3, Intel Core i7 10th Gen+, or AMD Ryzen 7+).</li>
+            <li><strong>Memory (RAM):</strong> Minimum 8GB (16GB highly recommended for processing multiple camera feeds simultaneously).</li>
+            <li><strong>Storage:</strong> At least 2GB of free space for storing the AI models, SQLite database logs, and saved threat screenshots.</li>
+            <li><strong>Cameras:</strong> Compatible with any standard USB Webcam, RTSP IP Cameras, or HTTP Video Streams.</li>
+        </ul>
+        
+    </div>
+
+</body>
+</html>

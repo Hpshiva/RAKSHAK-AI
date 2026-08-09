@@ -39,9 +39,9 @@
             animation: pulse-red 2s infinite;
         }
         @keyframes pulse-red {
-            0% { background-color: rgba(239, 68, 68, 0.1); }
-            50% { background-color: rgba(239, 68, 68, 0.3); }
-            100% { background-color: rgba(239, 68, 68, 0.1); }
+            0% { background-color: rgba(239, 68, 68, 0.2); }
+            50% { background-color: rgba(239, 68, 68, 0.5); }
+            100% { background-color: rgba(239, 68, 68, 0.2); }
         }
 
         /* Top navigation */
@@ -313,13 +313,78 @@
                 font-size: 0.8rem;
             }
         }
+        /* Glassy Toast Notification */
+        .glass-toast {
+            position: fixed;
+            top: -100px; /* Hidden initially */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-radius: 99px; /* Capsule shape */
+            padding: 12px 20px 12px 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 2000;
+            transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 340px;
+        }
+
+        .glass-toast.show {
+            top: 20px;
+        }
+
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            background: #ef4444; /* Red for alert */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .toast-content {
+            flex-grow: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast-time {
+            font-weight: 400;
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+
+        .toast-message {
+            color: #4b5563;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
 
     <div class="topbar">
         <h1>RAKSHAK AI</h1>
-        <a href="/logout" class="btn-glass">Log Out</a>
+        <div style="display: flex; gap: 10px;">
+            <a href="/faces" class="btn-glass"><i class="fa-solid fa-users"></i> Known Faces</a>
+            <a href="/about" class="btn-glass"><i class="fa-solid fa-circle-info"></i> About SOP</a>
+            <a href="/logout" class="btn-glass">Log Out</a>
+        </div>
     </div>
 
     <div class="main-content">
@@ -369,8 +434,8 @@
                             
                             <div style="display: flex; justify-content: center; gap: 15px;">
                                 <button onclick="controlVideo('seek/-5')" class="btn-glass dark-context"><i class="fa-solid fa-backward"></i></button>
-                                <button onclick="controlVideo('play')" id="play-btn" class="btn-glass dark-context" style="display: none; color: var(--accent-green);"><i class="fa-solid fa-play"></i></button>
-                                <button onclick="controlVideo('pause')" id="pause-btn" class="btn-glass dark-context" style="color: var(--accent-orange);"><i class="fa-solid fa-pause"></i></button>
+                                <button onclick="controlVideo('play')" id="play-btn" class="btn-glass dark-context" style="display: none;"><i class="fa-solid fa-play"></i></button>
+                                <button onclick="controlVideo('pause')" id="pause-btn" class="btn-glass dark-context"><i class="fa-solid fa-pause"></i></button>
                                 <button onclick="controlVideo('seek/5')" class="btn-glass dark-context"><i class="fa-solid fa-forward"></i></button>
                             </div>
                             
@@ -406,7 +471,44 @@
         </div>
     </div>
 
+    <!-- Glassy Toast Notification -->
+    <div id="screenshotToast" class="glass-toast">
+        <div class="toast-icon">
+            <i class="fa-solid fa-crop-simple"></i>
+        </div>
+        <div class="toast-content">
+            <div class="toast-title">Screenshot saved <span class="toast-time" id="toastTime">Just now</span></div>
+            <div class="toast-message">Tap here to see your screenshot.</div>
+        </div>
+        <div>
+            <i class="fa-solid fa-chevron-down" style="color: #9ca3af; font-size: 0.8rem;"></i>
+        </div>
+    </div>
+
     <script>
+        let previousScreenshotTime = null;
+
+        function showScreenshotToast() {
+            const toast = document.getElementById('screenshotToast');
+            const timeEl = document.getElementById('toastTime');
+            
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            timeEl.textContent = `${hours}:${minutes} ${ampm}`;
+            
+            toast.classList.add('show');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
         // Initialize Dynamic Cameras
         async function loadCameras() {
             try {
@@ -605,7 +707,7 @@
                     log.innerHTML = `
                         <div class="log-time">${item.time}</div>
                         <div class="log-label">${item.label} (${item.confidence}%)</div>
-                        <div class="log-cam">📍 ${item.camera}</div>
+                        <div class="log-cam">${item.camera}</div>
                     `;
                     logContainer.appendChild(log);
                 });
@@ -619,6 +721,14 @@
             try {
                 const response = await fetch('/robot_status');
                 const data = await response.json();
+                
+                // Screenshot Toast Logic
+                if (data.last_screenshot_time) {
+                    if (previousScreenshotTime !== null && data.last_screenshot_time > previousScreenshotTime) {
+                        showScreenshotToast();
+                    }
+                    previousScreenshotTime = data.last_screenshot_time;
+                }
                 
                 document.getElementById('system-people').textContent = data.people;
                 
