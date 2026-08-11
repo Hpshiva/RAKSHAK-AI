@@ -48,57 +48,85 @@
             100% { background-color: rgba(239, 68, 68, 0.1); }
         }
 
-        /* Top Navigation */
+                /* Top Navigation */
+        .topbar-wrapper {
+            width: 100%;
+            padding: 20px 40px 20px 40px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 100;
+        }
+
         .topbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 20px 40px;
-            /* Secondary grid styling for elements that need glassmorphism */
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 99px;
+            padding: 10px 24px;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .topbar:hover {
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.1);
         }
 
         .logo-area {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-weight: 700;
-            font-size: 1.25rem;
+            font-weight: 800;
+            font-size: 1.15rem;
             letter-spacing: -0.5px;
+            color: var(--text-primary);
         }
 
         .logo-icon {
-            width: 32px;
-            height: 32px;
-            background-color: #ef4444;
-            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-red), #ff6b6b);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
         .nav-links {
             display: flex;
-            gap: 30px;
+            gap: 10px;
             margin-left: 40px;
+            background: rgba(0,0,0,0.03);
+            padding: 5px;
+            border-radius: 99px;
         }
 
         .nav-links a {
             text-decoration: none;
             color: var(--text-secondary);
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-            padding-bottom: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 99px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .nav-links a.active {
-            color: var(--text-primary);
-            border-bottom: 2px solid var(--text-primary);
+            color: var(--accent-blue);
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
-        .nav-links a:hover {
+        .nav-links a:hover:not(.active) {
             color: var(--text-primary);
         }
 
@@ -528,24 +556,26 @@
 </head>
 <body>
 
-    <div class="topbar">
-        <div style="display: flex; align-items: center;">
-            <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
-                <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                RAKSHAK AI
-            </a>
-            <div class="nav-links">
-                <a href="/dashboard" class="active">Dashboard</a>
-                <a href="/video_analysis">Video Analysis</a>
-                <a href="/faces">Known Faces</a>
-                <a href="/about">About SOP</a>
+        <div class="topbar-wrapper">
+        <div class="topbar">
+            <div style="display: flex; align-items: center;">
+                <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
+                    <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    RAKSHAK AI
+                </a>
+                <div class="nav-links">
+                    <a href="/dashboard" class="active">Dashboard</a>
+                    <a href="/video_analysis">Video Analysis</a>
+                    <a href="/faces">Known Faces</a>
+                    <a href="/about">About SOP</a>
+                </div>
             </div>
-        </div>
-        
-        <div class="top-right">
-            <a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a>
-            <a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
-            <img src="https://ui-avatars.com/api/?name=Admin+User&background=111827&color=fff" class="profile-pic" alt="Profile">
+            
+            <div class="top-right">
+                <a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a>
+                <a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+                <img src="https://ui-avatars.com/api/?name=Admin+User&background=111827&color=fff" class="profile-pic" alt="Profile">
+            </div>
         </div>
     </div>
 
