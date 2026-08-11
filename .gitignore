@@ -65,3 +65,5 @@ tools/*.dmg
 *.dmg
 *.crt
 *.key
+# Uploaded faces
+faces/*

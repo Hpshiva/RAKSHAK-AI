@@ -38,8 +38,12 @@ class FaceRecognizer:
                     if faces:
                         # Grab the most prominent face
                         embedding = faces[0].embedding
-                        parts = filename.split('_')
-                        name = parts[0] if len(parts) > 1 else filename.split('.')[0]
+                        if '__' in filename:
+                            parts = filename.split('__')
+                            name = f"{parts[0]} ({parts[1]})"
+                        else:
+                            parts = filename.split('_')
+                            name = parts[0] if len(parts) > 1 else filename.split('.')[0]
                         self.known_faces.append((name, embedding))
         print(f"Loaded {len(self.known_faces)} known faces.")
 

@@ -11,9 +11,13 @@ from ai.detector import detect
 import ai.detector as detector
 from database import initialize_database
 from database import get_detection_count
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "rakshak-ai-2026"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "rakshak-ai-2026-fallback")
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload size
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -87,6 +91,7 @@ cameras = {} # dict of camera_id (int) -> ZeroLatencyCamera
 
 def get_camera(camera_id):
     global cameras
+    
     if camera_id not in cameras or cameras[camera_id] is None or not cameras[camera_id].isOpened():
         cap = ZeroLatencyCamera(camera_id)
         
@@ -106,7 +111,7 @@ def generate_webcam_frames(camera_id=0):
     
     # Initialize state if not present
     if camera_id not in webcam_enabled:
-        webcam_enabled[camera_id] = True
+        webcam_enabled[camera_id] = False
         
     if camera_id not in active_viewers:
         active_viewers[camera_id] = 0
@@ -115,7 +120,7 @@ def generate_webcam_frames(camera_id=0):
     try:
         loading_count = 0
         while True:
-            if not webcam_enabled.get(camera_id, True):
+            if not webcam_enabled.get(camera_id, False):
                 if camera_id in cameras and cameras[camera_id] is not None:
                     cameras[camera_id].release()
                     cameras[camera_id] = None
@@ -265,6 +270,9 @@ def generate_uploaded_video_frames():
 
 @app.route("/", methods=["GET", "POST"])
 def login():
+    if session.get("logged_in"):
+        return redirect("/dashboard")
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "").strip()
@@ -272,7 +280,7 @@ def login():
         valid_login = (
             (email == "principal@rakshakai.edu" and password == "Rakshak@2026") or
             (email == "tech@rakshakai.edu" and password == "Tech@2026") or
-            (email == "admin@rakshakai.edu" and password == "Admin@2026") or
+            (email == "test@gmail.com" and password == "123") or
             (email == "shrishail2071409" and password == "2071409")
         )
 
@@ -293,11 +301,10 @@ def login():
     return render_template("login.html")
 
 def send_real_otp_email(receiver_email, otp):
-    sender_email = "shrishail2071409@gmail.com"
-    # IMPORTANT: Generate a 16-letter App Password in your Google Account (2-Step Verification)
-    sender_password = "nejjhnrddxqskhhe" 
+    sender_email = os.environ.get("SMTP_EMAIL", "")
+    sender_password = os.environ.get("SMTP_PASSWORD", "")
     
-    if sender_password == "YOUR_APP_PASSWORD_HERE":
+    if not sender_email or not sender_password or sender_password == "YOUR_APP_PASSWORD_HERE":
         print("\n" + "=" * 50)
         print("⚠️ NO APP PASSWORD PROVIDED - USING MOCK EMAIL ⚠️")
         print(f"📧 [MOCK EMAIL] To: {receiver_email}")
@@ -328,7 +335,9 @@ def send_real_otp_email(receiver_email, otp):
 def forgot_password():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
-        if email != "shrishail2071409@gmail.com":
+        admin_email = os.environ.get("ADMIN_EMAIL", "shrishail2071409@gmail.com").strip().lower()
+        
+        if email != admin_email:
             return render_template("forgot_password.html", error="This email is not registered as an admin.")
         
         otp = str(random.randint(100000, 999999))
@@ -366,7 +375,7 @@ def verify_otp():
         
         if expected_otp and otp_entered == expected_otp:
             session["logged_in"] = True
-            session["user"] = "admin@rakshakai.edu"
+            session["user"] = "test@gmail.com"
             
             session.pop("reset_otp", None)
             session.pop("reset_email", None)
@@ -407,9 +416,6 @@ def camera_feed(camera_id):
 
 @app.route("/api/cameras")
 def get_cameras():
-    # Force use of only the primary camera [0]
-    # Scanning (0-3) on macOS often accidentally wakes up sleeping iPhones (Continuity Camera)
-    # or virtual cameras, which results in phantom "grey box" video feeds on the dashboard.
     return jsonify({"cameras": [0]})
 
 @app.route("/upload_video", methods=["POST"])
@@ -419,11 +425,11 @@ def upload_video():
         return redirect("/")
         
     if 'video_file' not in request.files:
-        return redirect("/dashboard")
+        return redirect("/video_analysis")
         
     file = request.files['video_file']
     if file.filename == '':
-        return redirect("/dashboard")
+        return redirect("/video_analysis")
         
     if file:
         filename = secure_filename(file.filename)
@@ -431,7 +437,7 @@ def upload_video():
         file.save(filepath)
         uploaded_video_path = filepath
         
-    return redirect("/dashboard")
+    return redirect("/video_analysis")
 
 @app.route("/uploaded_video_feed")
 def uploaded_video_feed():
@@ -448,6 +454,11 @@ def robot_status():
 def detections():
     return jsonify(detector.detections)
 
+@app.route("/api/recent_faces")
+def recent_faces():
+    faces = database.get_recent_face_detections(5)
+    return jsonify(faces)
+
 @app.route("/api/stats")
 def api_stats():
     return {
@@ -463,7 +474,7 @@ def toggle_webcam():
     data = request.get_json() or {}
     camera_id = data.get("camera_id", 0)
     
-    current_state = webcam_enabled.get(camera_id, True)
+    current_state = webcam_enabled.get(camera_id, False)
     webcam_enabled[camera_id] = not current_state
     
     return jsonify({"status": "success", "camera_id": camera_id, "webcam_enabled": webcam_enabled[camera_id]})
@@ -517,18 +528,27 @@ def faces():
         return redirect("/")
     return render_template("faces.html")
 
+@app.route("/video_analysis")
+def video_analysis():
+    if not session.get("logged_in"):
+        return redirect("/")
+    
+    # We pass the uploaded_video_path to know whether to show the player or the upload form
+    return render_template("video_analysis.html", has_uploaded_video=uploaded_video_path is not None)
+
 @app.route("/api/upload_face", methods=["POST"])
 def upload_face():
-    if "file" not in request.files or "name" not in request.form:
-        return jsonify({"error": "Missing file or name"}), 400
+    if "file" not in request.files or "name" not in request.form or "role" not in request.form:
+        return jsonify({"error": "Missing file, name, or role"}), 400
         
     file = request.files["file"]
     name = request.form["name"].strip()
+    role = request.form["role"].strip()
     
-    if file.filename == "" or not name:
-        return jsonify({"error": "Invalid file or name"}), 400
+    if file.filename == "" or not name or not role:
+        return jsonify({"error": "Invalid file, name, or role"}), 400
         
-    filename = secure_filename(f"{name}_{file.filename}")
+    filename = secure_filename(f"{name}__{role}__{file.filename}")
     filepath = os.path.join(app.config["FACES_FOLDER"], filename)
     file.save(filepath)
     
@@ -547,11 +567,15 @@ def api_faces():
     if os.path.exists(app.config["FACES_FOLDER"]):
         for filename in os.listdir(app.config["FACES_FOLDER"]):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                # name is usually everything before the last underscore, 
-                # but because we formatted it as {name}_{original}, we can just split.
-                parts = filename.split('_')
-                name = parts[0] if len(parts) > 1 else filename.split('.')[0]
-                faces_list.append({"name": name, "filename": filename})
+                if '__' in filename:
+                    parts = filename.split('__')
+                    name = parts[0]
+                    role = parts[1]
+                else:
+                    parts = filename.split('_')
+                    name = parts[0] if len(parts) > 1 else filename.split('.')[0]
+                    role = ""
+                faces_list.append({"name": name, "role": role, "filename": filename})
     return jsonify(faces_list)
 
 @app.route("/api/delete_face", methods=["POST"])
@@ -571,11 +595,54 @@ def delete_face():
             return jsonify({"status": "deleted"})
     return jsonify({"error": "File not found"}), 404
 
+@app.route("/api/edit_face", methods=["POST"])
+def edit_face():
+    data = request.get_json()
+    old_filename = data.get("old_filename")
+    new_name = data.get("new_name")
+    new_role = data.get("new_role")
+    
+    if not old_filename or not new_name or not new_role:
+        return jsonify({"error": "Missing required fields"}), 400
+        
+    old_filepath = os.path.join(app.config["FACES_FOLDER"], secure_filename(old_filename))
+    if not os.path.exists(old_filepath):
+        return jsonify({"error": "File not found"}), 404
+        
+    # Extract original part of filename to keep
+    if '__' in old_filename:
+        original = old_filename.split('__')[-1]
+    else:
+        # Fallback for older formats like name_Photo.jpg
+        original = old_filename.split('_', 1)[-1] if '_' in old_filename else old_filename
+        
+    new_filename = secure_filename(f"{new_name.strip()}__{new_role.strip()}__{original}")
+    new_filepath = os.path.join(app.config["FACES_FOLDER"], new_filename)
+    
+    os.rename(old_filepath, new_filepath)
+    
+    # Reload faces
+    try:
+        from ai.detector import face_recognizer
+        face_recognizer.load_faces(app.config["FACES_FOLDER"])
+    except Exception as e:
+        print("Error reloading faces:", e)
+        
+    return jsonify({"status": "success"})
+
 @app.route("/faces_img/<filename>")
 def faces_img(filename):
     return send_from_directory(app.config["FACES_FOLDER"], filename)
 
 initialize_database()
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('about.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('about.html'), 500
 
 if __name__ == "__main__":
     app.run(

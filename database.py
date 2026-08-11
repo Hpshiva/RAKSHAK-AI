@@ -1,12 +1,14 @@
 import sqlite3
+import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 
 DB_PATH = Path("database") / "rakshak.db"
 
+db_lock = threading.Lock()
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -86,54 +88,55 @@ def should_save_detection(label, camera, cooldown=5):
     return datetime.now() - last_detection > timedelta(seconds=cooldown)
 
 def save_detection(label, confidence, severity, camera):
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO detections (label, confidence, severity, camera)
+            VALUES (?, ?, ?, ?)
+        """, (label, confidence, severity, camera))
+        detection_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+    return detection_id
+
+def get_recent_face_detections(limit=5):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
-        INSERT INTO detections
-        (label, confidence, severity, camera)
-        VALUES (?, ?, ?, ?)
-    """, (
-        label,
-        confidence,
-        severity,
-        camera
-    ))
-
-    conn.commit()
+        SELECT label, camera, detected_at, severity
+        FROM detections
+        WHERE label != 'person' AND label != 'knife' AND label != 'gun' AND label NOT LIKE 'person%'
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
     conn.close()
+    return [dict(row) for row in rows]
 
 def save_snapshot(path):
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO snapshots(path)
-        VALUES (?)
-    """, (
-        path,
-    ))
-
-    conn.commit()
-    conn.close()
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO snapshots (path)
+            VALUES (?)
+        """, (path,))
+        conn.commit()
+        conn.close()
 
 def save_recording(filename, camera):
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO recordings
-        (filename, camera)
-        VALUES (?, ?)
-    """, (
-        filename,
-        camera
-    ))
-
-    conn.commit()
-    conn.close()
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO recordings (filename, camera)
+            VALUES (?, ?)
+        """, (filename, camera))
+        conn.commit()
+        conn.close()
 
 def save_report(report_id, camera, threat, robot_status, report_date, report_time):
 

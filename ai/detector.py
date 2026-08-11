@@ -139,8 +139,25 @@ def add_detection(label, confidence, threat, camera_name):
 def draw_box(frame, coords, confidence, color, label):
     x1, y1, x2, y2 = coords
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-    cv2.rectangle(frame, (x1, y1 - 28), (x2, y1), color, -1)
-    cv2.putText(frame, f"{label.title()} {confidence:.1f}%", (x1 + 5, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.55, WHITE, 2)
+    
+    text = f"{label.title()} {confidence:.1f}%"
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.55
+    thickness = 2
+    
+    # Get text size to draw a proper background rectangle
+    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    
+    # Calculate background rectangle coordinates
+    bg_y1 = max(0, y1 - text_height - 10)
+    bg_y2 = y1 if bg_y1 > 0 else text_height + 10
+    
+    # Draw filled background
+    cv2.rectangle(frame, (x1, bg_y1), (x1 + text_width + 10, bg_y2), color, -1)
+    
+    # Draw text
+    text_y = y1 - 5 if bg_y1 > 0 else bg_y2 - 5
+    cv2.putText(frame, text, (x1 + 5, text_y), font, font_scale, WHITE, thickness)
 
 # ==========================================
 # ASYNC AI WORKER THREAD
@@ -159,8 +176,9 @@ def ai_worker():
             continue
             
         for cid, frame in frames_to_process:
-            state = get_camera_state(cid)
-            state.frame_count_ai += 1
+            try:
+                state = get_camera_state(cid)
+                state.frame_count_ai += 1
             
             try:
                 # 1. Violence / Threat Detection (every 5 frames to save CPU)
@@ -177,21 +195,6 @@ def ai_worker():
                         attacker_info = ""
                         if recognized_faces:
                             # Filter out duplicates and format
-                            unique_names = list(set(f["name"] for f in recognized_faces if f["name"] != "Unknown"))
-                            if unique_names:
-                                names_str = ", ".join(unique_names)
-                                if state.last_violence_label.startswith("person "):
-                                    state.last_violence_label = f"{names_str} " + state.last_violence_label[7:]
-                                else:
-                                    state.last_violence_label = f"{names_str} involved in {state.last_violence_label}"
-
-                        add_detection(state.last_violence_label, round(state.last_violence_confidence * 100, 1), "CRITICAL", state.name)
-                        save_detection(label=state.last_violence_label, confidence=round(state.last_violence_confidence * 100, 1), severity="CRITICAL", camera=state.name)
-                        
-                        current_time = time.time()
-                        
-                        # Reset screenshot count if 60 seconds have passed since last violence (new event)
-                        if current_time - state.last_violence_time > 60:
                             state.screenshot_count_this_event = 0
                         
                         state.last_violence_time = current_time

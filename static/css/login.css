@@ -11,20 +11,19 @@
 body {
     min-height: 100vh;
     overflow: hidden;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #F5F5F7;
-    /* Apple subtle light gray */
+    font-family: 'Inter', sans-serif;
+    background: #f3f4f6;
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
-    color: #1D1D1F;
+    color: #111827;
 }
 
 .background {
     position: fixed;
     inset: 0;
-    background: #F2F2F7;
+    background: #f3f4f6;
     z-index: -2;
 }
 
@@ -45,8 +44,8 @@ body {
 .logo h1 {
     font-size: 52px;
     font-weight: 700;
-    letter-spacing: 1px;
-    color: #1D1D1F;
+    letter-spacing: -1px;
+    color: #111827;
     text-shadow: none;
 }
 
@@ -61,25 +60,23 @@ body {
 .login-card {
     width: 400px;
     padding: 40px;
-    border-radius: 20px;
-
-    /* Apple Light Flat Card */
-    background: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    background: #ffffff;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
 }
 
 .login-card h2 {
     font-size: 30px;
     font-weight: 600;
     margin-bottom: 8px;
-    color: #1D1D1F;
+    color: #111827;
     text-align: center;
 }
 
@@ -102,11 +99,11 @@ body {
 .input-group input {
     width: 100%;
     height: 50px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
     outline: none;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.8);
-    color: #1D1D1F;
+    background: #f9fafb;
+    color: #111827;
     padding: 0 45px;
     font-size: 15px;
     transition: all 0.2s ease;
@@ -117,10 +114,9 @@ body {
 }
 
 .input-group input:focus {
-    border: 1px solid #007AFF;
-    /* Apple Blue */
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-    background: #FFFFFF;
+    border: 1px solid #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    background: #ffffff;
 }
 
 .icon {
@@ -132,7 +128,7 @@ body {
 }
 
 .input-group input:focus~.icon {
-    color: #007AFF;
+    color: #3b82f6;
 }
 
 .toggle-password {
@@ -182,20 +178,20 @@ body {
     width: 100%;
     height: 50px;
     border: none;
-    border-radius: 12px;
-    background: #007AFF;
+    border-radius: 99px;
+    background: #111827;
     color: #ffffff;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all .2s ease;
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .login-card button:hover {
-    background: #006ae6;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+    background: #1f2937;
+    transform: scale(1.02);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
 }
 
 .login-card button:active {
