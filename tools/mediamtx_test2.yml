@@ -1,0 +1,8 @@
+rtspAddress: :9000
+rtpAddress: :9002
+rtcpAddress: :9003
+rtmpAddress: :9004
+webrtcAddress: :9006
+srtAddress: :9008
+api: yes
+apiAddress: :9009

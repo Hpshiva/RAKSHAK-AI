@@ -57,3 +57,11 @@ GoogleService-Info.plist
 # Generated Media
 snapshots/
 recordings/
+
+# Large binaries and media
+tools/mediamtx
+tools/*.dmg
+*.mp4
+*.dmg
+*.crt
+*.key
