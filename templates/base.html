@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Rakshak AI | Security Command Center{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    </script>
+    <style>
+        :root {
+            --bg-color: #080c14;
+            --panel-bg: #0d1527;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #00d2ff;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: rgba(255, 255, 255, 0.05);
+            --sidebar-width: 250px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f2f4f8;
+            --panel-bg: #ffffff;
+            --text-primary: #1d1d1f;
+            --text-secondary: #64748b;
+            --accent-cyan: #007aff;
+            --accent-green: #34c759;
+            --border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        .sidebar-header {
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar-header i {
+            color: var(--accent-cyan);
+            font-size: 24px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .sidebar-header p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 15px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin: 4px 15px;
+            border-radius: 8px;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #007aff, #00d2ff);
+            color: #000;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.15);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* Main Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 15px 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .badge-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            display: none;
+        }
+        
+        .badge-dot.active {
+            display: block;
+        }
+
+        .time-badge {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 120px;
+            width: 320px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        
+        .notification-dropdown.show { display: flex; }
+        
+        .notification-header { 
+            padding: 15px; 
+            border-bottom: 1px solid var(--border-color); 
+            font-weight: 600; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .notification-body { 
+            max-height: 300px; 
+            overflow-y: auto; 
+            padding: 10px; 
+        }
+        
+        .notification-item { 
+            padding: 10px; 
+            border-bottom: 1px solid var(--border-color); 
+            font-size: 0.8rem; 
+        }
+        .notification-item:last-child { border-bottom: none; }
+        .notification-item .time { color: var(--text-secondary); font-size: 0.7rem; margin-top: 4px; display: block; }
+
+        /* Common Utility Classes */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .panel-header i { margin-right: 8px; color: var(--accent-cyan); }
+        .panel-content { flex: 1; overflow-y: auto; padding: 15px; }
+        
+        .pill.badge-red { background: rgba(255, 59, 48, 0.2); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;}
+        .pill.badge-orange { background: rgba(255, 149, 0, 0.2); color: #ff9500; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;}
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        @media (max-width: 1200px) {
+            .top-cards { grid-template-columns: repeat(2, 1fr) !important; }
+            .dashboard-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; border-right: none; border-bottom: 1px solid var(--border-color); align-items: center; }
+            .sidebar-header { margin-bottom: 0; margin-right: 20px; }
+            .sidebar-header div { display: none; }
+            .nav-item { padding: 8px 12px; margin: 0 5px; white-space: nowrap; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header-actions { width: 100%; justify-content: space-between; }
+            .notification-dropdown { right: 10px; width: 90%; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+                <h2>Rakshak AI</h2>
+                <p>Security Command</p>
+            </div>
+        </div>
+        
+        <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+        <a href="/video_analysis" class="nav-item {% if request.path == '/video_analysis' %}active{% endif %}"><i class="fa-solid fa-video"></i> Live Cameras</a>
+        <a href="/analytics" class="nav-item {% if request.path == '/analytics' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+        <a href="/alerts" class="nav-item {% if request.path == '/alerts' %}active{% endif %}"><i class="fa-solid fa-bell"></i> Alerts</a>
+        <a href="/faces" class="nav-item {% if request.path == '/faces' %}active{% endif %}"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <h1>{% block header_title %}Security Command Center{% endblock %}</h1>
+                <p>{% block header_subtitle %}Real-Time AI Surveillance Dashboard{% endblock %}</p>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="theme-toggle"><i class="fa-solid fa-moon"></i></button>
+                <button class="icon-btn" id="bell-toggle">
+                    <i class="fa-solid fa-bell"></i>
+                    <div class="badge-dot" id="bell-badge"></div>
+                </button>
+                <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                <a href="/logout" class="icon-btn"><i class="fa-solid fa-user"></i></a>
+                <div class="time-badge" id="clock">--:--:-- --</div>
+            </div>
+            
+            <!-- Notification Dropdown -->
+            <div class="notification-dropdown" id="notification-dropdown">
+                <div class="notification-header">
+                    <span>Notifications</span>
+                    <i class="fa-solid fa-check-double" style="cursor:pointer; color:var(--text-secondary);" title="Mark all as read" onclick="clearBadge()"></i>
+                </div>
+                <div class="notification-body" id="nav-notifications-container">
+                    <div style="padding:10px; color:var(--text-secondary); text-align:center;">No recent alerts.</div>
+                </div>
+            </div>
+        </div>
+
+        {% block content %}{% endblock %}
+
+    </div>
+
+    <script>
+        // Clock Update
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Theme Toggler
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = themeToggle.querySelector('i');
+        
+        function updateThemeIcon() {
+            if (document.documentElement.getAttribute('data-theme') === 'light') {
+                themeIcon.className = 'fa-solid fa-sun';
+            } else {
+                themeIcon.className = 'fa-solid fa-moon';
+            }
+        }
+        
+        updateThemeIcon();
+        
+        themeToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+            updateThemeIcon();
+        });
+
+        // Notifications Popover
+        const bellToggle = document.getElementById('bell-toggle');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const bellBadge = document.getElementById('bell-badge');
+        
+        bellToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown.classList.toggle('show');
+            clearBadge();
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!notifDropdown.contains(e.target) && !bellToggle.contains(e.target)) {
+                notifDropdown.classList.remove('show');
+            }
+        });
+        
+        function clearBadge() {
+            bellBadge.classList.remove('active');
+        }
+
+        let lastNotificationCount = 0;
+        
+        async function fetchGlobalNotifications() {
+            try {
+                const response = await fetch('/api/recent_faces');
+                const faces = await response.json();
+                
+                const container = document.getElementById('nav-notifications-container');
+                if (!container) return;
+                
+                if (faces.length === 0) {
+                    container.innerHTML = '<div style="padding:10px; color:var(--text-secondary); text-align:center;">No recent alerts.</div>';
+                    return;
+                }
+                
+                // Show red dot if new notifications arrived
+                if (faces.length > lastNotificationCount) {
+                    if (!notifDropdown.classList.contains('show')) {
+                        bellBadge.classList.add('active');
+                    }
+                }
+                lastNotificationCount = faces.length;
+                
+                container.innerHTML = '';
+                faces.forEach(face => {
+                    const el = document.createElement('div');
+                    el.className = 'notification-item';
+                    let timeStr = new Date(face.detected_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    let dotColor = 'var(--accent-cyan)';
+                    if(face.severity === 'CRITICAL') dotColor = 'var(--accent-red)';
+                    else if(face.severity === 'HIGH') dotColor = '#ff9500';
+                    
+                    el.innerHTML = `
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <span style="color:${dotColor}; font-size:1.2rem; line-height:1;">●</span> 
+                            <div>
+                                ${face.label} detected at ${face.camera}
+                                <span class="time"><i class="fa-solid fa-clock"></i> ${timeStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            } catch(e) {}
+        }
+
+        setInterval(fetchGlobalNotifications, 2000);
+        fetchGlobalNotifications();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

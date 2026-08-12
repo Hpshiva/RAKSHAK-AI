@@ -1,901 +1,403 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rakshak AI - Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-color: transparent;
-            --panel-bg: rgba(255, 255, 255, 0.65);
-            --text-primary: #1d1d1f;
-            --text-secondary: #86868b;
-            --accent-red: #ff3b30;
-            --accent-green: #34c759;
-            --accent-orange: #ff9500;
-            --accent-blue: #007aff;
-            --border-color: rgba(255, 255, 255, 0.8);
-            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-            --border-radius: 24px;
-        }
+{% extends "base.html" %}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+{% block extra_css %}
+<style>
+    .video-container {
+        width: 100%;
+        background: #000;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: 
-                radial-gradient(circle at 15% 50%, rgba(120, 160, 255, 0.4), transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(160, 140, 255, 0.4), transparent 50%),
-                radial-gradient(circle at 50% 80%, rgba(100, 220, 255, 0.4), transparent 50%),
-                #f2f4f8;
-            background-attachment: fixed;
-            color: var(--text-primary);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transition: background-color 0.3s;
-        }
+    .video-feed {
+        width: 100%;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        background: #000;
+    }
 
-        body.critical-alert {
-            animation: pulse-red 2s infinite;
-        }
-        @keyframes pulse-red {
-            0% { background-color: rgba(239, 68, 68, 0.1); }
-            50% { background-color: rgba(239, 68, 68, 0.3); }
-            100% { background-color: rgba(239, 68, 68, 0.1); }
-        }
+    .controls-overlay {
+        background: rgba(19, 28, 49, 0.9);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid var(--border-color);
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--text-primary);
+    }
 
-                /* Top Navigation */
-        .topbar-wrapper {
-            width: 100%;
-            padding: 20px 40px 20px 40px;
-            display: flex;
-            justify-content: center;
-            position: relative;
-            z-index: 100;
-        }
+    .btn-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-circle:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(1.05);
+    }
 
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 99px;
-            padding: 10px 24px;
-            width: 100%;
-            max-width: 100%;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
+    /* Upload Area */
+    .upload-area {
+        background: rgba(255, 255, 255, 0.02);
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .upload-content {
+        position: relative;
+        z-index: 2;
+    }
 
-        .topbar:hover {
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.1);
-        }
+    .upload-btn {
+        background: var(--text-primary);
+        color: var(--bg-color);
+        padding: 12px 25px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        margin-top: 15px;
+        transition: 0.2s;
+    }
+    .upload-btn:hover {
+        transform: translateY(-2px);
+    }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 800;
-            font-size: 1.15rem;
-            letter-spacing: -0.5px;
-            color: var(--text-primary);
-        }
+    .pill {
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    .btn-camera-toggle {
+        background: linear-gradient(var(--panel-bg), var(--panel-bg)) padding-box,
+                    linear-gradient(135deg, #007aff, #00d2ff) border-box;
+        border: 1px solid transparent;
+        border-radius: 20px;
+        color: var(--accent-cyan);
+        cursor: pointer;
+        padding: 6px 14px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-camera-toggle:hover {
+        background: linear-gradient(rgba(0, 210, 255, 0.15), rgba(0, 210, 255, 0.15)) padding-box,
+                    linear-gradient(135deg, #00d2ff, #007aff) border-box;
+        color: #ffffff;
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
 
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-red), #ff6b6b);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1rem;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-        }
+{% block header_title %}Live Cameras{% endblock %}
+{% block header_subtitle %}Multi-stream AI Monitoring{% endblock %}
 
-        .nav-links {
-            display: flex;
-            gap: 10px;
-            margin-left: 40px;
-            background: rgba(0,0,0,0.03);
-            padding: 5px;
-            border-radius: 99px;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-weight: 600;
-            font-size: 0.9rem;
-            padding: 8px 16px;
-            border-radius: 99px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .nav-links a.active {
-            color: var(--accent-blue);
-            background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-
-        .nav-links a:hover:not(.active) {
-            color: var(--text-primary);
-        }
-
-        .top-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .search-bar {
-            display: flex;
-            align-items: center;
-            background: #ffffff;
-            border-radius: 99px;
-            padding: 10px 18px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            width: 280px;
-            gap: 10px;
-        }
-
-        .search-bar input {
-            border: none;
-            outline: none;
-            background: transparent;
-            font-family: inherit;
-            font-size: 0.9rem;
-            width: 100%;
-            color: var(--text-primary);
-        }
-
-        .search-bar input::placeholder {
-            color: #9ca3af;
-        }
-
-        .search-bar i {
-            color: #9ca3af;
-        }
-
-        .icon-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-primary);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .icon-btn:hover {
-            background: rgba(255, 255, 255, 0.9);
-            transform: scale(1.05);
-        }
-
-        .profile-pic {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            object-fit: cover;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-        }
-
-        /* Main Dashboard Grid */
-        .dashboard-container {
-            flex: 1;
-            padding: 0 40px 40px 40px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr);
-            gap: 30px;
-            max-width: 100%;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* Cards */
-        .card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            padding: 30px;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .right-column {
-            width: 100%;
-            background: var(--panel-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-radius: var(--border-radius);
-            padding: 30px;
-            box-shadow: var(--card-shadow);
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .card-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+{% block content %}
+<div style="height: calc(100vh - 120px); overflow: hidden;">
+    <div class="dashboard-grid" style="grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: stretch; height: 100%;">
         
-        .card-subtitle {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-        }
-
-        /* Pill tags */
-        .pill {
-            padding: 6px 14px;
-            border-radius: 99px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #f3f4f6;
-            color: var(--text-secondary);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .pill.active { background: #1f2937; color: #ffffff; }
-        .pill.badge-red { background: #fee2e2; color: #ef4444; }
-        .pill.badge-blue { background: #dbeafe; color: #3b82f6; }
-        .pill.pulse-red { animation: pulse-dot-red 2s infinite; }
-        .pill.pulse-green { animation: pulse-dot-green 2s infinite; }
-
-        @keyframes pulse-dot-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-        
-        @keyframes pulse-dot-green {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        .select-btn {
-            padding: 6px 14px;
-            border-radius: 99px;
-            border: 1px solid var(--border-color);
-            background: #ffffff;
-            font-family: inherit;
-            font-size: 0.85rem;
-            color: var(--text-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Primary Video Container */
-        .video-container {
-            width: 100%;
-            background: #f9fafb;
-            border-radius: 16px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .video-feed {
-            width: 100%;
-            aspect-ratio: 16/9;
-            object-fit: cover;
-            background: #000;
-        }
-        
-        .controls-overlay {
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid var(--border-color);
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .btn-circle {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #f3f4f6;
-            border: none;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-circle:hover { 
-            background: #e5e7eb;
-            transform: scale(1.1);
-        }
-
-        /* Secondary Grid Area */
-        .secondary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        /* Profile Rows */
-        .profile-row {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 99px;
-            margin-bottom: 15px;
-            background: #f9fafb;
-        }
-        .profile-row img {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            margin-right: 15px;
-            object-fit: cover;
-        }
-        .profile-info { flex: 1; }
-        .profile-name { font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;}
-        .profile-role { font-size: 0.85rem; color: var(--text-secondary); }
-        .profile-add {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            cursor: pointer;
-            margin-right: 5px;
-        }
-
-        /* Upload Area */
-        .upload-area {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: var(--border-radius);
-            border: 2px dashed rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            box-shadow: var(--card-shadow);
-        }
-        
-        .upload-content {
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(8px);
-            padding: 20px;
-            border-radius: 16px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .upload-btn {
-            background: #ffffff;
-            padding: 12px 25px;
-            border-radius: 99px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: var(--text-primary);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            margin-top: 15px;
-        }
-
-        /* Right Sidebar Logs */
-        .log-container {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .log-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            animation: slideInFade 0.4s ease forwards;
-        }
-        .log-item:last-child { border-bottom: none; }
-        
-        @keyframes slideInFade {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .log-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            background: #f3f4f6;
-            color: var(--text-secondary);
-        }
-
-        .log-item.threat-CRITICAL .log-icon { background: #fee2e2; color: #ef4444; }
-        .log-item.threat-HIGH .log-icon { background: #ffedd5; color: #f59e0b; }
-        .log-item.threat-LOW .log-icon { background: #dbeafe; color: #3b82f6; }
-
-        .log-content { flex: 1; }
-        .log-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
-        .log-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
-        
-        .log-meta {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 0.85rem;
-            color: #9ca3af;
-        }
-
-        /* Status Progress */
-        .status-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-        .status-stat {
-            text-align: left;
-            border-right: 2px solid #f3f4f6;
-            padding-right: 20px;
-        }
-        .status-stat:last-child { border-right: none; padding-right: 0; }
-        .status-stat .label { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px; }
-        .status-stat .value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-
-        @media (max-width: 1200px) {
-            .dashboard-container { grid-template-columns: 1fr; }
-            .secondary-grid { grid-template-columns: 1fr; }
-        }
-        
-        /* Glassy Toast Notification */
-        .glass-toast {
-            position: fixed;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-radius: 99px;
-            padding: 12px 20px 12px 12px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            z-index: 2000;
-            transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            min-width: 340px;
-        }
-        .glass-toast.show { top: 20px; }
-        .toast-icon { width: 40px; height: 40px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; }
-        .toast-content { flex-grow: 1; }
-        .toast-title { font-weight: 700; color: #1f2937; font-size: 0.95rem; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
-        .toast-time { font-weight: 400; color: #6b7280; font-size: 0.75rem; }
-        .toast-message { color: #4b5563; font-size: 0.85rem; }
-        
-    </style>
-</head>
-<body>
-
-        <div class="topbar-wrapper">
-        <div class="topbar">
-            <div style="display: flex; align-items: center;">
-                <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
-                    <div class="logo-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                    RAKSHAK AI
-                </a>
-                <div class="nav-links">
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/video_analysis" class="active">Video Analysis</a>
-                    <a href="/faces">Known Faces</a>
-                    <a href="/about">About SOP</a>
+        <!-- Left Column: Upload + AI Detection Feed -->
+        <div class="grid-col" style="flex: 1.2; display: flex; flex-direction: column; gap: 20px; height: 100%; overflow: hidden;">
+            <!-- Upload Offline Video Panel -->
+            <div class="panel" style="max-height: 55%; overflow-y: auto; display: flex; flex-direction: column;">
+                <div class="panel-header">
+                    <div><i class="fa-solid fa-film"></i> Offline Video Analysis</div>
                 </div>
-            </div>
-            
-            <div class="top-right">
-                <a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a>
-                <a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
-                <img src="https://ui-avatars.com/api/?name=Admin+User&background=111827&color=fff" class="profile-pic" alt="Profile">
-            </div>
-        </div>
-    </div>
-
-    <div class="dashboard-container">
-        
-        <!-- Left Column -->
-        <div style="display: flex; flex-direction: column; gap: 30px;">
-            
-            <!-- Main Video Feed Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fa-solid fa-film" style="color: #9ca3af;"></i> 
-                        Offline Video Analysis
-                    </h2>
-                </div>
-                <p class="card-subtitle">Upload offline footage for AI threat detection.</p>
-                
-                <div class="upload-area" style="margin-top: 15px; margin-bottom: 20px;">
-                    <div class="upload-content">
-                        <form action="/upload_video" method="POST" enctype="multipart/form-data">
-                            <label class="upload-btn">
-                                <i class="fa-solid fa-arrow-up-from-bracket"></i> Select Video File
-                                <input type="file" name="video_file" accept="video/mp4,video/x-m4v,video/*" required style="display: none;" onchange="this.form.submit()">
-                            </label>
-                        </form>
-                    </div>
-                </div>
-
-                {% if has_uploaded_video %}
-                <div class="video-container" style="margin-top: 20px;">
-                    <div style="padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff;">
-                        <div style="display: flex; align-items: center; gap: 10px; font-weight: 600;">
-                            <div class="live-dot" style="background:var(--accent-blue)" id="uploaded-dot"></div>
-                            Uploaded Video Analysis
-                        </div>
-                        <button onclick="closeVideo(this)" class="pill badge-red" style="border: none; cursor: pointer;">Close</button>
-                    </div>
-                    <img src="/uploaded_video_feed" class="video-feed" alt="Uploaded Video Feed">
+                <div class="panel-content">
+                    <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9rem;">Upload offline footage for AI threat detection.</p>
+                    <form action="/upload_video" method="POST" enctype="multipart/form-data">
+                        <label class="time-badge" style="cursor: pointer; display: inline-block;">
+                            <i class="fa-solid fa-arrow-up-from-bracket"></i> Select Video File
+                            <input type="file" name="video_file" accept="video/mp4,video/x-m4v,video/*" required style="display: none;" onchange="this.form.submit()">
+                        </label>
+                    </form>
                     
-                    <div class="controls-overlay">
-                        <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
-                            <span id="current-time" style="font-family: monospace; font-size: 0.85rem;">0:00</span>
-                            <input type="range" id="video-progress" style="flex: 1; accent-color: var(--text-primary); cursor: pointer; height: 4px;" min="0" max="100" value="0" step="0.1">
-                            <span id="total-time" style="font-family: monospace; font-size: 0.85rem;">0:00</span>
+                    {% if has_uploaded_video %}
+                    <div style="margin-top: 20px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                        <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                            <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem;">
+                                <div class="badge-dot" style="position: static; display: block; background: var(--accent-cyan);" id="uploaded-dot"></div>
+                                Uploaded Video Analysis
+                            </div>
+                            <button onclick="closeVideo(this)" class="pill badge-red" style="border: none; cursor: pointer;"><i class="fa-solid fa-xmark"></i> Close</button>
                         </div>
-                        <div style="display: flex; gap: 10px; margin-left: 20px;">
-                            <button onclick="controlVideo('seek/-5')" class="btn-circle"><i class="fa-solid fa-backward-step"></i></button>
-                            <button onclick="controlVideo('play')" id="play-btn" class="btn-circle" style="display: none; background: var(--text-primary); color: white;"><i class="fa-solid fa-play"></i></button>
-                            <button onclick="controlVideo('pause')" id="pause-btn" class="btn-circle" style="background: var(--text-primary); color: white;"><i class="fa-solid fa-pause"></i></button>
-                            <button onclick="controlVideo('seek/5')" class="btn-circle"><i class="fa-solid fa-forward-step"></i></button>
+                        <div style="position: relative; background: #000;">
+                            <img src="/uploaded_video_feed" style="width: 100%; display: block;" alt="Uploaded Video Feed">
+                            <!-- Controls Overlay -->
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.8));">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <button onclick="controlVideo('play')" id="play-btn" style="display:none; background:none; border:none; color:white; cursor:pointer;"><i class="fa-solid fa-play fa-xl"></i></button>
+                                    <button onclick="controlVideo('pause')" id="pause-btn" style="background:none; border:none; color:white; cursor:pointer;"><i class="fa-solid fa-pause fa-xl"></i></button>
+                                    <button onclick="controlVideo('seek/-5')" style="background:none; border:none; color:white; cursor:pointer;"><i class="fa-solid fa-backward-step fa-lg"></i></button>
+                                    <button onclick="controlVideo('seek/5')" style="background:none; border:none; color:white; cursor:pointer;"><i class="fa-solid fa-forward-step fa-lg"></i></button>
+                                    <div style="flex-grow: 1; display: flex; align-items: center; gap: 10px; margin-left: 10px;">
+                                        <span id="current-time" style="color: white; font-size: 0.8rem; min-width: 40px; font-family: monospace;">0:00</span>
+                                        <input type="range" id="video-progress" min="0" max="100" value="0" style="flex-grow: 1; accent-color: var(--accent-cyan);">
+                                        <span id="total-time" style="color: white; font-size: 0.8rem; min-width: 40px; font-family: monospace;">0:00</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Right Column -->
-        <div class="right-column" style="height: calc(100vh - 120px);">
-            <div class="card-header" style="margin-bottom: 15px;">
-                <h2 class="card-title">Recent Alerts</h2>
-            </div>
-            
-            <p class="card-subtitle">Real-time analysis of threats and system events.</p>
-
-            <div class="log-container" id="log-container">
-                <!-- Logs injected here -->
             </div>
 
-            <!-- System Stats -->
-            <div class="status-container">
-                <div class="status-stat">
-                    <div class="label">Total People</div>
-                    <div class="value" id="system-people">0</div>
+            <!-- AI Detection Feed Panel -->
+            <div class="panel" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="panel-header">
+                    <div><i class="fa-solid fa-microchip"></i> AI Detection Feed</div>
                 </div>
-                <div class="status-stat">
-                    <div class="label">System Threat</div>
-                    <div class="value" id="system-threat" style="font-size: 1.1rem; color: var(--accent-green);">Normal</div>
-                </div>
-                <div class="status-stat">
-                    <div class="label">Cameras</div>
-                    <div class="value" id="system-cameras">0</div>
+                <div class="panel-content" id="log-container" style="flex: 1; overflow-y: auto; padding: 15px;">
+                    <div style="color: var(--text-secondary); text-align: center; padding: 20px;">No active alerts</div>
                 </div>
             </div>
         </div>
 
+        <!-- Active Cameras Grid (Right Column / Bottom when stacked) -->
+        <div class="panel">
+            <div class="panel-header">
+                <div><i class="fa-solid fa-video"></i> Network Cameras</div>
+                <div class="panel-actions">
+                    <span class="panel-pill" id="system-cameras">0</span> Cameras
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="dynamic-cameras-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                    <!-- Dynamically populated cameras -->
+                </div>
+            </div>
+        </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Glassy Toast Notification -->
-    <div id="screenshotToast" class="glass-toast">
-        <div class="toast-icon"><i class="fa-solid fa-crop-simple"></i></div>
-        <div class="toast-content">
-            <div class="toast-title">Screenshot saved <span class="toast-time" id="toastTime">Just now</span></div>
-            <div class="toast-message">Tap here to see your screenshot.</div>
-        </div>
-        <div><i class="fa-solid fa-chevron-down" style="color: #9ca3af; font-size: 0.8rem;"></i></div>
-    </div>
-
-    <script>
-        let previousScreenshotTime = null;
-
-        function showScreenshotToast() {
-            const toast = document.getElementById('screenshotToast');
-            const timeEl = document.getElementById('toastTime');
-            const now = new Date();
-            let hours = now.getHours();
-            let minutes = now.getMinutes();
-            const ampm = hours >= 12 ? 'pm' : 'am';
-            hours = hours % 12;
-            hours = hours ? hours : 12; 
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-            timeEl.textContent = `${hours}:${minutes} ${ampm}`;
+{% block scripts %}
+<script>
+    async function loadCameras() {
+        try {
+            const res = await fetch('/api/cameras');
+            const data = await res.json();
+            const container = document.getElementById('dynamic-cameras-container');
+            document.getElementById('system-cameras').textContent = data.cameras.length;
             
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 5000);
-        }
-
-        async function loadCameras() {
-            try {
-                const res = await fetch('/api/cameras');
-                const data = await res.json();
-                const container = document.getElementById('dynamic-cameras-container');
-                document.getElementById('system-cameras').textContent = data.cameras.length;
+            data.cameras.forEach(camId => {
+                const card = document.createElement('div');
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '8px';
+                card.style.overflow = 'hidden';
+                card.style.background = 'var(--panel-bg)';
                 
-                data.cameras.forEach(camId => {
-                    const card = document.createElement('div');
-                    card.className = 'video-container';
-                    card.innerHTML = `
-                        <div style="padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff;">
-                            <div style="display: flex; align-items: center; gap: 10px; font-weight: 600;">
-                                <div class="live-dot" id="webcam-dot-${camId}" style="display: none;"></div>
-                                Camera ${camId}
-                                <span class="pill offline">Offline</span>
-                            </div>
-                            <button onclick="toggleWebcam(this, ${camId})" class="pill badge-red" style="border: none; cursor: pointer;">Turn On</button>
+                card.innerHTML = `
+                    <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem;">
+                            <div class="badge-dot" id="webcam-dot-${camId}" style="position: static; background: var(--accent-red); display: none;"></div>
+                            Camera ${camId}
+                            <span class="pill badge-orange offline-pill" style="margin-left: 5px;">Offline</span>
                         </div>
-                        <img src="/camera_feed/${camId}" class="video-feed" alt="Camera ${camId}">
-                        <div class="controls-overlay" style="padding: 10px 15px;">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);"><i class="fa-solid fa-location-dot"></i> Main Entrance</div>
-                            <button onclick="toggleFullscreen(this)" class="btn-circle" style="width: 32px; height: 32px;" title="Full screen (F)">
+                        <button onclick="toggleWebcam(this, ${camId})" class="btn-camera-toggle">Turn On</button>
+                    </div>
+                    <div style="position: relative; background: #000;">
+                        <img src="/camera_feed/${camId}" style="width: 100%; display: block;" alt="Camera ${camId}">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 10px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); display: flex; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; color: #fff;"><i class="fa-solid fa-location-dot"></i> Network Cam</div>
+                            <button onclick="toggleFullscreen(this)" style="background: none; border: none; color: white; cursor: pointer;" title="Full screen">
                                 <i class="fa-solid fa-expand"></i>
                             </button>
                         </div>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (err) {
-                console.error("Failed to load cameras", err);
-            }
-        }
-        
-        loadCameras();
-
-        async function toggleWebcam(btn, camId) {
-            const res = await fetch('/api/toggle_webcam', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ camera_id: camId })
+                    </div>
+                `;
+                container.appendChild(card);
             });
-            const data = await res.json();
-            const pill = btn.previousElementSibling.querySelector('.pill');
-            if (data.webcam_enabled) {
-                btn.textContent = "Turn Off";
-                document.getElementById('webcam-dot-' + camId).style.display = 'block';
-                if(pill) { pill.className = 'pill active'; pill.textContent = 'Live'; }
-            } else {
-                btn.textContent = "Turn On";
-                document.getElementById('webcam-dot-' + camId).style.display = 'none';
-                if(pill) { pill.className = 'pill offline'; pill.textContent = 'Offline'; }
-            }
+        } catch (err) {
+            console.error("Failed to load cameras", err);
         }
+    }
+    
+    loadCameras();
 
-        async function controlVideo(action) {
-            await fetch('/api/video/' + action, { method: 'POST' });
-            if (action === 'play') {
-                document.getElementById('play-btn').style.display = 'none';
-                document.getElementById('pause-btn').style.display = 'flex';
-                document.getElementById('uploaded-dot').style.display = 'block';
-            } else if (action === 'pause') {
-                document.getElementById('play-btn').style.display = 'flex';
-                document.getElementById('pause-btn').style.display = 'none';
-                document.getElementById('uploaded-dot').style.display = 'none';
-            }
-        }
-
-        async function closeVideo(btn) {
-            await fetch('/api/video/close', { method: 'POST' });
-            btn.closest('.video-container').style.display = 'none';
-        }
-
-        // Progress Bar Logic
-        let isDraggingProgress = false;
-        const progressSlider = document.getElementById('video-progress');
-        const currentTimeSpan = document.getElementById('current-time');
-        const totalTimeSpan = document.getElementById('total-time');
-
-        function formatTime(seconds) {
-            if (isNaN(seconds) || seconds < 0) return "0:00";
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m}:${s.toString().padStart(2, '0')}`;
-        }
-
-        if (progressSlider) {
-            progressSlider.addEventListener('mousedown', () => isDraggingProgress = true);
-            progressSlider.addEventListener('input', (e) => {
-                currentTimeSpan.textContent = formatTime(e.target.value);
-            });
-            progressSlider.addEventListener('change', async (e) => {
-                await fetch('/api/video_seek_absolute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ time: e.target.value })
-                });
-                isDraggingProgress = false;
-            });
+    let lastDetectionsJson = '';
+    async function fetchDetections() {
+        try {
+            const response = await fetch('/detections');
+            const data = await response.json();
+            const textData = JSON.stringify(data);
             
-            setInterval(async () => {
-                if (isDraggingProgress) return;
-                try {
-                    const res = await fetch('/api/video_progress');
-                    const data = await res.json();
-                    if (!isDraggingProgress && data.total > 0) {
-                        progressSlider.max = data.total;
-                        progressSlider.value = data.current;
-                        currentTimeSpan.textContent = formatTime(data.current);
-                        totalTimeSpan.textContent = formatTime(data.total);
-                    }
-                } catch (e) {}
-            }, 500);
-        }
-
-        function toggleFullscreen(btn) {
-            const container = btn.closest('.video-container');
-            if (!document.fullscreenElement) {
-                if (container.requestFullscreen) container.requestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
+            if (textData === lastDetectionsJson) {
+                return; 
             }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'f') {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                if (!document.fullscreenElement) {
-                    const container = document.querySelector('.video-container:hover') || document.documentElement;
-                    if (container.requestFullscreen) container.requestFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                }
-            }
-        });
-
-        let lastDetectionsJson = "";
-        
-        async function fetchDetections() {
-            try {
-                const response = await fetch('/detections');
-                const textData = await response.text();
-                
-                if (textData === lastDetectionsJson) {
-                    return; // No new detections, skip DOM re-render to prevent animation blinking
-                }
-                lastDetectionsJson = textData;
-                
-                const data = JSON.parse(textData);
-                
-                const logContainer = document.getElementById('log-container');
-                logContainer.innerHTML = '';
-                
-                data.forEach(item => {
-                    const log = document.createElement('div');
-                    log.className = `log-item threat-${item.threat}`;
+            lastDetectionsJson = textData;
+            
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '';
+            
+            data.forEach((item, index) => {
+                if (index < 10) { // Render top 10
+                    const card = document.createElement('div');
+                    card.className = 'nested-feed-card';
+                    card.style.background = 'var(--bg-color)';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.borderRadius = '12px';
+                    card.style.padding = '15px';
+                    card.style.marginBottom = '10px';
                     
-                    let iconClass = "fa-solid fa-user-check";
-                    let threatPill = `<span class="pill" style="font-size:0.7rem; padding: 2px 8px;">Normal</span>`;
-                    if(item.threat === 'CRITICAL') { iconClass = "fa-solid fa-triangle-exclamation"; threatPill = `<span class="pill badge-red" style="font-size:0.7rem; padding: 2px 8px;">Critical</span>`; }
-                    else if(item.threat === 'HIGH') { iconClass = "fa-solid fa-circle-exclamation"; threatPill = `<span class="pill" style="background:#ffedd5; color:#ea580c; font-size:0.7rem; padding: 2px 8px;">Warning</span>`; }
+                    let threatText = "LOW";
+                    let threatColor = "var(--accent-green)";
+                    if (item.threat === 'CRITICAL') { 
+                        threatText = "CRITICAL"; 
+                        threatColor = "var(--accent-red)";
+                    } else if (item.threat === 'HIGH') { 
+                        threatText = "HIGH"; 
+                        threatColor = "#ff9500";
+                    }
 
-                    log.innerHTML = `
-                        <div class="log-icon"><i class="${iconClass}"></i></div>
-                        <div class="log-content">
-                            <div class="log-title">${item.label} ${threatPill}</div>
-                            <div class="log-subtitle">Confidence: ${item.confidence}%</div>
-                            <div class="log-meta">
-                                <span><i class="fa-regular fa-clock"></i> ${item.time}</span>
-                                <span><i class="fa-solid fa-video"></i> ${item.camera}</span>
-                            </div>
+                    card.innerHTML = `
+                        <h4 style="margin: 0 0 10px 0; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+                            <i class="fa-solid fa-user-shield" style="color: var(--accent-cyan);"></i> ${item.label}
+                        </h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                            <div><i class="fa-solid fa-bullseye" style="color: var(--accent-cyan);"></i> Confidence: ${item.confidence}%</div>
+                            <div><i class="fa-solid fa-location-dot" style="color: var(--accent-red);"></i> Camera: ${item.camera}</div>
+                            <div><i class="fa-solid fa-triangle-exclamation" style="color: ${threatColor};"></i> Threat: ${threatText}</div>
+                            <div><i class="fa-solid fa-clock" style="color: var(--accent-cyan);"></i> ${item.time}</div>
                         </div>
                     `;
-                    logContainer.appendChild(log);
-                });
-            } catch (err) {}
-        }
-
-        async function fetchStatus() {
-            try {
-                const response = await fetch('/robot_status');
-                const data = await response.json();
-                
-                if (data.last_screenshot_time) {
-                    if (previousScreenshotTime !== null && data.last_screenshot_time > previousScreenshotTime) {
-                        showScreenshotToast();
-                    }
-                    previousScreenshotTime = data.last_screenshot_time;
+                    logContainer.appendChild(card);
                 }
-                
-                document.getElementById('system-people').textContent = data.people;
-                
-                const threatEl = document.getElementById('system-threat');
-                if(data.threat === 'CRITICAL') {
-                    threatEl.textContent = 'Critical';
-                    threatEl.style.color = 'var(--accent-red)';
-                    document.body.classList.add('critical-alert');
-                } else if(data.threat === 'HIGH') {
-                    threatEl.textContent = 'Elevated';
-                    threatEl.style.color = 'var(--accent-orange)';
-                    document.body.classList.remove('critical-alert');
-                } else {
-                    threatEl.textContent = 'Normal';
-                    threatEl.style.color = 'var(--accent-green)';
-                    document.body.classList.remove('critical-alert');
-                }
-                
-            } catch (err) {}
-        }
+            });
+            
+            if (data.length === 0) {
+                logContainer.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 20px;">No active alerts</div>';
+            }
+        } catch (err) {}
+    }
 
-        setInterval(() => {
-            fetchDetections();
-            fetchStatus();
-        }, 1000);
+    fetchDetections();
+    setInterval(fetchDetections, 2000);
+
+    async function toggleWebcam(btn, camId) {
+        const res = await fetch('/api/toggle_webcam', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ camera_id: camId })
+        });
+        const data = await res.json();
+        const headerDiv = btn.previousElementSibling;
+        const pill = headerDiv.querySelector('.offline-pill');
+        const dot = document.getElementById('webcam-dot-' + camId);
         
-        fetchDetections();
-        fetchStatus();
-    </script>
-</body>
-</html>
+        if (data.webcam_enabled) {
+            btn.textContent = "Turn Off";
+            dot.style.display = 'block';
+            if(pill) { pill.className = 'pill badge-red offline-pill'; pill.textContent = 'Live'; }
+        } else {
+            btn.textContent = "Turn On";
+            dot.style.display = 'none';
+            if(pill) { pill.className = 'pill badge-orange offline-pill'; pill.textContent = 'Offline'; }
+        }
+    }
+
+    async function controlVideo(action) {
+        await fetch('/api/video/' + action, { method: 'POST' });
+        if (action === 'play') {
+            document.getElementById('play-btn').style.display = 'none';
+            document.getElementById('pause-btn').style.display = 'inline-block';
+            document.getElementById('uploaded-dot').style.display = 'block';
+        } else if (action === 'pause') {
+            document.getElementById('play-btn').style.display = 'inline-block';
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('uploaded-dot').style.display = 'none';
+        }
+    }
+
+    async function closeVideo(btn) {
+        await fetch('/api/video/close', { method: 'POST' });
+        btn.closest('div').parentElement.style.display = 'none';
+    }
+
+    // Progress Bar Logic
+    let isDraggingProgress = false;
+    const progressSlider = document.getElementById('video-progress');
+    const currentTimeSpan = document.getElementById('current-time');
+    const totalTimeSpan = document.getElementById('total-time');
+
+    function formatTime(seconds) {
+        if (isNaN(seconds) || seconds < 0) return "0:00";
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    if (progressSlider) {
+        progressSlider.addEventListener('mousedown', () => isDraggingProgress = true);
+        progressSlider.addEventListener('input', (e) => {
+            currentTimeSpan.textContent = formatTime(e.target.value);
+        });
+        progressSlider.addEventListener('change', async (e) => {
+            await fetch('/api/video_seek_absolute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ time: e.target.value })
+            });
+            isDraggingProgress = false;
+        });
+        
+        setInterval(async () => {
+            if (isDraggingProgress) return;
+            try {
+                const res = await fetch('/api/video_progress');
+                const data = await res.json();
+                if (!isDraggingProgress && data.total > 0) {
+                    progressSlider.max = data.total;
+                    progressSlider.value = data.current;
+                    currentTimeSpan.textContent = formatTime(data.current);
+                    totalTimeSpan.textContent = formatTime(data.total);
+                }
+            } catch (e) {}
+        }, 500);
+    }
+
+    function toggleFullscreen(btn) {
+        const container = btn.closest('div').parentElement; // The div with position:relative
+        if (!document.fullscreenElement) {
+            if (container.requestFullscreen) container.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+</script>
+{% endblock %}

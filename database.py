@@ -26,9 +26,14 @@ def initialize_database():
         confidence REAL,
         severity TEXT,
         camera TEXT,
+        count INTEGER DEFAULT 1,
         detected_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )
     """)
+    try:
+        cursor.execute("ALTER TABLE detections ADD COLUMN count INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS snapshots (
@@ -62,15 +67,16 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("DELETE FROM detections WHERE label = 'person'")
     conn.commit()
     conn.close()
 
-def should_save_detection(label, camera, cooldown=5):
+def should_save_detection(label, camera, cooldown=60):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT detected_at
+        SELECT datetime(detected_at, 'localtime') as detected_at
         FROM detections
         WHERE label = ? AND camera = ?
         ORDER BY id DESC
@@ -83,7 +89,9 @@ def should_save_detection(label, camera, cooldown=5):
     if not row:
         return True
 
-    last_detection = datetime.fromisoformat(row["detected_at"])
+    # SQLite returns YYYY-MM-DD HH:MM:SS, format for fromisoformat needs T divider
+    dt_str = row["detected_at"].replace(" ", "T")
+    last_detection = datetime.fromisoformat(dt_str)
 
     return datetime.now() - last_detection > timedelta(seconds=cooldown)
 
@@ -91,11 +99,29 @@ def save_detection(label, confidence, severity, camera):
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
+        
         cursor.execute("""
-            INSERT INTO detections (label, confidence, severity, camera)
-            VALUES (?, ?, ?, ?)
-        """, (label, confidence, severity, camera))
-        detection_id = cursor.lastrowid
+            SELECT id, label, camera, count 
+            FROM detections 
+            ORDER BY id DESC 
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        
+        if row and row["label"] == label and row["camera"] == camera:
+            cursor.execute("""
+                UPDATE detections 
+                SET confidence = ?, severity = ?, count = count + 1, detected_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (confidence, severity, row["id"]))
+            detection_id = row["id"]
+        else:
+            cursor.execute("""
+                INSERT INTO detections (label, confidence, severity, camera, count)
+                VALUES (?, ?, ?, ?, 1)
+            """, (label, confidence, severity, camera))
+            detection_id = cursor.lastrowid
+            
         conn.commit()
         conn.close()
     return detection_id
@@ -177,3 +203,72 @@ def get_detection_count():
     conn.close()
 
     return total
+
+def get_all_detections(severity_filter=None, limit=200):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if severity_filter:
+        cursor.execute("""
+            SELECT id, label, confidence, severity, camera, count, datetime(detected_at, 'localtime') as detected_at
+            FROM detections
+            WHERE severity = ?
+            ORDER BY id DESC
+            LIMIT ?
+        """, (severity_filter, limit))
+    else:
+        cursor.execute("""
+            SELECT id, label, confidence, severity, camera, count, datetime(detected_at, 'localtime') as detected_at
+            FROM detections
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,))
+        
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def delete_detection(detection_id):
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM detections WHERE id = ?", (detection_id,))
+        conn.commit()
+        conn.close()
+
+def get_analytics_summary():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # 1. Severity counts
+    cursor.execute("SELECT severity, COUNT(*) as count FROM detections GROUP BY severity")
+    severity_counts = {row["severity"]: row["count"] for row in cursor.fetchall()}
+    
+    # 2. Label distribution
+    cursor.execute("SELECT label, COUNT(*) as count FROM detections GROUP BY label")
+    label_counts = {row["label"]: row["count"] for row in cursor.fetchall()}
+    
+    # 3. Last 7 days alerts count (daily)
+    cursor.execute("""
+        SELECT date(detected_at, 'localtime') as day, COUNT(*) as count
+        FROM detections
+        WHERE detected_at >= datetime('now', '-7 days')
+        GROUP BY day
+        ORDER BY day ASC
+    """)
+    daily_counts = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    return {
+        "severity_counts": severity_counts,
+        "label_counts": label_counts,
+        "daily_counts": daily_counts
+    }
+
+def clear_all_detections():
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM detections")
+        conn.commit()
+        conn.close()

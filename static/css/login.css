@@ -1,6 +1,42 @@
 /* ==========================================================
-                    RAKSHAK AI LOGIN - LIGHT MODE
+                    RAKSHAK AI LOGIN - THEME AWARE
 ========================================================== */
+
+:root {
+    --login-bg: #080c14;
+    --login-card-bg: #0d1527;
+    --login-card-border: rgba(255, 255, 255, 0.05);
+    --login-card-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    --login-text: #ffffff;
+    --login-subtitle: #8b9bb4;
+    --login-input-bg: #171d2b;
+    --login-input-border: rgba(255, 255, 255, 0.08);
+    --login-input-text: #ffffff;
+    --login-input-placeholder: #607085;
+    --login-btn-bg: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%);
+    --login-btn-text: #ffffff;
+    --login-grid-color: rgba(255, 255, 255, 0.025);
+    --login-glow-color: rgba(0, 210, 255, 0.15);
+    --login-link: #3b82f6;
+}
+
+[data-theme="light"] {
+    --login-bg: #f3f4f6;
+    --login-card-bg: #ffffff;
+    --login-card-border: rgba(0,0,0,0.05);
+    --login-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    --login-text: #111827;
+    --login-subtitle: #86868b;
+    --login-input-bg: #f9fafb;
+    --login-input-border: #e5e7eb;
+    --login-input-text: #111827;
+    --login-input-placeholder: #86868b;
+    --login-btn-bg: #111827;
+    --login-btn-text: #ffffff;
+    --login-grid-color: rgba(0, 0, 0, 0.03);
+    --login-glow-color: rgba(59, 130, 246, 0.15);
+    --login-link: #007AFF;
+}
 
 * {
     margin: 0;
@@ -12,19 +48,41 @@ body {
     min-height: 100vh;
     overflow: hidden;
     font-family: 'Inter', sans-serif;
-    background: #f3f4f6;
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
-    color: #111827;
+    background-color: var(--login-bg);
+    color: var(--login-text);
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .background {
     position: fixed;
     inset: 0;
-    background: #f3f4f6;
+    background-color: var(--login-bg);
+    background-image: 
+        linear-gradient(var(--login-grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--login-grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center center;
     z-index: -2;
+    transition: background-color 0.3s;
+}
+
+.background::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70vw;
+    height: 400px;
+    background: radial-gradient(ellipse at top, var(--login-glow-color), transparent 70%);
+    z-index: -1;
+    border-radius: 50%;
+    pointer-events: none;
+    transition: background 0.3s;
 }
 
 /* ==========================================================
@@ -37,54 +95,56 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 25px;
+    gap: 30px;
     z-index: 1;
 }
 
+.logo {
+    text-align: center;
+}
+
 .logo h1 {
-    font-size: 52px;
-    font-weight: 700;
-    letter-spacing: -1px;
-    color: #111827;
-    text-shadow: none;
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--login-text);
+    /* For dark mode we had text-shadow, for light mode we remove it */
+}
+
+[data-theme="dark"] .logo h1 {
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
 
 .logo p {
-    margin-top: 10px;
-    color: #86868B;
-    text-align: center;
-    font-size: 15px;
+    margin-top: 8px;
+    color: var(--login-subtitle);
+    font-size: 14px;
     font-weight: 500;
 }
 
 .login-card {
-    width: 400px;
+    width: 420px;
     padding: 40px;
-    border-radius: 24px;
-    background: #ffffff;
-    border: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.login-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    background: var(--login-card-bg);
+    border: 1px solid var(--login-card-border);
+    box-shadow: var(--login-card-shadow);
+    transition: background 0.3s, border 0.3s, box-shadow 0.3s;
 }
 
 .login-card h2 {
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 600;
     margin-bottom: 8px;
-    color: #111827;
-    text-align: center;
+    color: var(--login-text);
+    text-align: left;
 }
 
 .subtitle {
     font-size: 14px;
-    color: #86868B;
-    margin-bottom: 24px;
-    text-align: center;
+    color: var(--login-subtitle);
+    margin-bottom: 25px;
+    text-align: left;
 }
 
 /* ==========================================================
@@ -93,30 +153,29 @@ body {
 
 .input-group {
     position: relative;
-    margin-top: 16px;
+    margin-bottom: 16px;
 }
 
 .input-group input {
     width: 100%;
-    height: 50px;
-    border: 1px solid #e5e7eb;
+    height: 48px;
+    border: 1px solid var(--login-input-border);
     outline: none;
-    border-radius: 12px;
-    background: #f9fafb;
-    color: #111827;
+    border-radius: 8px;
+    background: var(--login-input-bg);
+    color: var(--login-input-text);
     padding: 0 45px;
-    font-size: 15px;
+    font-size: 14px;
     transition: all 0.2s ease;
 }
 
 .input-group input::placeholder {
-    color: #86868B;
+    color: var(--login-input-placeholder);
 }
 
 .input-group input:focus {
-    border: 1px solid #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    background: #ffffff;
+    border-color: #00c6ff;
+    box-shadow: 0 0 0 2px rgba(0, 198, 255, 0.2);
 }
 
 .icon {
@@ -124,11 +183,12 @@ body {
     left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: #86868B;
+    color: var(--login-input-placeholder);
+    font-size: 15px;
 }
 
 .input-group input:focus~.icon {
-    color: #3b82f6;
+    color: #00c6ff;
 }
 
 .toggle-password {
@@ -137,12 +197,13 @@ body {
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
-    color: #86868B;
+    color: var(--login-input-placeholder);
+    font-size: 15px;
     transition: color 0.2s;
 }
 
 .toggle-password:hover {
-    color: #1D1D1F;
+    color: var(--login-text);
 }
 
 /* ==========================================================
@@ -153,9 +214,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 18px 0 24px;
+    margin: 20px 0 25px;
     font-size: 13px;
-    color: #515154;
+    color: var(--login-text);
 }
 
 .options label {
@@ -165,9 +226,18 @@ body {
     cursor: pointer;
 }
 
+.options input[type="checkbox"] {
+    accent-color: #00c6ff;
+    width: 14px;
+    height: 14px;
+    background: var(--login-input-bg);
+    border: 1px solid var(--login-input-border);
+}
+
 .options a {
-    color: #007AFF;
+    color: var(--login-link);
     text-decoration: none;
+    font-weight: 500;
 }
 
 .options a:hover {
@@ -176,22 +246,25 @@ body {
 
 .login-card button {
     width: 100%;
-    height: 50px;
+    height: 48px;
     border: none;
-    border-radius: 99px;
-    background: #111827;
-    color: #ffffff;
-    font-size: 15px;
+    border-radius: 8px;
+    background: var(--login-btn-bg);
+    color: var(--login-btn-text);
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
     transition: all .2s ease;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3);
 }
 
 .login-card button:hover {
-    background: #1f2937;
-    transform: scale(1.02);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 20px rgba(0, 114, 255, 0.5);
+    transform: translateY(-2px);
 }
 
 .login-card button:active {
@@ -201,7 +274,7 @@ body {
 .login-error {
     margin-top: 15px;
     padding: 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     background: rgba(255, 59, 48, 0.1);
     border: 1px solid rgba(255, 59, 48, 0.2);
     color: #FF3B30;
@@ -211,24 +284,35 @@ body {
 }
 
 .security-badge {
-    margin-top: 24px;
+    margin-top: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    color: #86868B;
-    font-size: 13px;
-    font-weight: 500;
+    gap: 6px;
+    color: #00e676;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+[data-theme="light"] .security-badge {
+    color: #34C759;
 }
 
 .security-badge i {
-    color: #34C759;
-    /* Apple Green */
+    color: inherit;
 }
 
 .footer {
-    margin-top: 30px;
-    color: #86868B;
+    margin-top: 25px;
+    color: var(--login-subtitle);
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
+}
+
+/* Theme Toggle Button Position for Login */
+.login-theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
 }

@@ -6,11 +6,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
-from datetime import datetime
 from ai.detector import detect
 import ai.detector as detector
-from database import initialize_database
-from database import get_detection_count
+from database import get_detection_count, get_recent_face_detections, initialize_database, get_all_detections, delete_detection, get_analytics_summary, clear_all_detections
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,6 +24,13 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 FACES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'faces')
 os.makedirs(FACES_FOLDER, exist_ok=True)
 app.config['FACES_FOLDER'] = FACES_FOLDER
+
+ALLOWED_VIDEO_EXTENSIONS = {"avi", "m4v", "mkv", "mov", "mp4", "webm"}
+ALLOWED_IMAGE_EXTENSIONS = {"jpeg", "jpg", "png"}
+
+
+def has_allowed_extension(filename, allowed_extensions):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions
 
 # Global variable to store the path of the uploaded video
 uploaded_video_path = None
@@ -393,8 +398,68 @@ def verify_otp():
 def dashboard():
     if not session.get("logged_in"):
         return redirect("/")
+    return render_template("dashboard.html")
+
+@app.route("/robot")
+def robot():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("placeholder.html", title="Robot Dispatch")
+
+@app.route("/map")
+def map():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("placeholder.html", title="Campus Map")
+
+@app.route("/analytics")
+def analytics():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("analytics.html")
+
+@app.route("/alerts")
+def alerts():
+    if not session.get("logged_in"):
+        return redirect("/")
+    return render_template("alerts.html")
+
+@app.route("/api/alerts_history", methods=["GET"])
+def api_alerts_history():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
     
-    return render_template("dashboard.html", has_uploaded_video=(uploaded_video_path is not None))
+    severity_filter = request.args.get("severity")
+    if severity_filter == "All" or not severity_filter:
+        severity_filter = None
+        
+    alerts_data = get_all_detections(severity_filter=severity_filter)
+    return jsonify(alerts_data)
+
+@app.route("/api/alerts_history/<int:alert_id>", methods=["DELETE"])
+def api_delete_alert(alert_id):
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    delete_detection(alert_id)
+    return jsonify({"status": "success"})
+
+@app.route("/api/clear_all_detections", methods=["POST"])
+def api_clear_all_detections():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    clear_all_detections()
+    detector.detections.clear()
+    return jsonify({"status": "success"})
+
+@app.route("/api/analytics_metrics", methods=["GET"])
+def api_analytics_metrics():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    summary = get_analytics_summary()
+    return jsonify(summary)
 
 @app.route("/about")
 def about():
@@ -418,6 +483,10 @@ def camera_feed(camera_id):
 def get_cameras():
     return jsonify({"cameras": [0]})
 
+@app.route("/api/webcam_status/<int:camera_id>")
+def webcam_status(camera_id):
+    return jsonify({"camera_id": camera_id, "webcam_enabled": webcam_enabled.get(camera_id, False)})
+
 @app.route("/upload_video", methods=["POST"])
 def upload_video():
     global uploaded_video_path
@@ -431,11 +500,24 @@ def upload_video():
     if file.filename == '':
         return redirect("/video_analysis")
         
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        uploaded_video_path = filepath
+    if not has_allowed_extension(file.filename, ALLOWED_VIDEO_EXTENSIONS):
+        return jsonify({"error": "Unsupported video file type"}), 400
+
+    filename = secure_filename(file.filename)
+    if not filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    cap = cv2.VideoCapture(filepath)
+    is_valid_video = cap.isOpened() and cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0
+    cap.release()
+    if not is_valid_video:
+        os.remove(filepath)
+        return jsonify({"error": "The uploaded file is not a readable video"}), 400
+
+    uploaded_video_path = filepath
         
     return redirect("/video_analysis")
 
@@ -456,7 +538,7 @@ def detections():
 
 @app.route("/api/recent_faces")
 def recent_faces():
-    faces = database.get_recent_face_detections(5)
+    faces = get_recent_face_detections(5)
     return jsonify(faces)
 
 @app.route("/api/stats")
@@ -472,7 +554,10 @@ def api_stats():
 def toggle_webcam():
     global webcam_enabled
     data = request.get_json() or {}
-    camera_id = data.get("camera_id", 0)
+    try:
+        camera_id = int(data.get("camera_id", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "camera_id must be an integer"}), 400
     
     current_state = webcam_enabled.get(camera_id, False)
     webcam_enabled[camera_id] = not current_state
@@ -518,8 +603,12 @@ def api_video_seek_absolute():
     global video_seek_absolute
     data = request.get_json() or {}
     seek_time = data.get("time")
-    if seek_time is not None:
-        video_seek_absolute = float(seek_time)
+    if seek_time is None:
+        return jsonify({"error": "Missing time"}), 400
+    try:
+        video_seek_absolute = max(0.0, float(seek_time))
+    except (TypeError, ValueError):
+        return jsonify({"error": "time must be a number"}), 400
     return jsonify({"status": "ok"})
 
 @app.route("/faces")
@@ -547,6 +636,9 @@ def upload_face():
     
     if file.filename == "" or not name or not role:
         return jsonify({"error": "Invalid file, name, or role"}), 400
+
+    if not has_allowed_extension(file.filename, ALLOWED_IMAGE_EXTENSIONS):
+        return jsonify({"error": "Unsupported image file type"}), 400
         
     filename = secure_filename(f"{name}__{role}__{file.filename}")
     filepath = os.path.join(app.config["FACES_FOLDER"], filename)
@@ -580,7 +672,7 @@ def api_faces():
 
 @app.route("/api/delete_face", methods=["POST"])
 def delete_face():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     filename = data.get("filename")
     if filename:
         filepath = os.path.join(app.config["FACES_FOLDER"], secure_filename(filename))
@@ -590,14 +682,14 @@ def delete_face():
             try:
                 from ai.detector import face_recognizer
                 face_recognizer.load_faces(app.config["FACES_FOLDER"])
-            except:
-                pass
+            except Exception as error:
+                app.logger.warning("Could not reload known faces: %s", error)
             return jsonify({"status": "deleted"})
     return jsonify({"error": "File not found"}), 404
 
 @app.route("/api/edit_face", methods=["POST"])
 def edit_face():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     old_filename = data.get("old_filename")
     new_name = data.get("new_name")
     new_role = data.get("new_role")
@@ -619,6 +711,9 @@ def edit_face():
     new_filename = secure_filename(f"{new_name.strip()}__{new_role.strip()}__{original}")
     new_filepath = os.path.join(app.config["FACES_FOLDER"], new_filename)
     
+    if os.path.exists(new_filepath) and os.path.abspath(new_filepath) != os.path.abspath(old_filepath):
+        return jsonify({"error": "A face with that name and role already exists"}), 409
+
     os.rename(old_filepath, new_filepath)
     
     # Reload faces
@@ -647,7 +742,7 @@ def internal_error(error):
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        port=7860,
+        port=5002,
         debug=True,
         use_reloader=False
     )

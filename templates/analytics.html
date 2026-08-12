@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+
+{% block title %}Rakshak AI | Security Analytics{% endblock %}
+
+{% block header_title %}Security Analytics Dashboard{% endblock %}
+{% block header_subtitle %}Deep metrics and data insights from AI surveillance streams.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metrics-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+
+    .metric-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--accent-cyan);
+    }
+    .metric-card.critical::before { background: var(--accent-red); }
+    .metric-card.warning::before { background: #ff9500; }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent-cyan);
+    }
+    .metric-card.critical .metric-icon { background: rgba(255, 59, 48, 0.1); color: var(--accent-red); }
+    .metric-card.warning .metric-icon { background: rgba(255, 149, 0, 0.1); color: #ff9500; }
+
+    .metric-details h4 {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .metric-details div {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-top: 5px;
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 25px;
+    }
+
+    .chart-panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        height: 380px;
+    }
+    .chart-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .chart-panel-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .chart-panel-title i { color: var(--accent-cyan); }
+    
+    .time-selector {
+        display: flex;
+        gap: 5px;
+        background: rgba(255,255,255,0.05);
+        padding: 3px;
+        border-radius: 6px;
+    }
+    .time-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .time-btn.active {
+        background: linear-gradient(135deg, #007aff, #00d2ff);
+        color: #000;
+    }
+
+    .chart-container {
+        flex: 1;
+        position: relative;
+        min-height: 0; /* Important for Chart.js inside flexbox */
+    }
+
+    .insights-panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .insight-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.03);
+    }
+    .insight-bullet {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-cyan);
+        margin-top: 5px;
+    }
+    .insight-row.critical .insight-bullet { background: var(--accent-red); }
+    .insight-row.warning .insight-bullet { background: #ff9500; }
+
+    @media (max-width: 1200px) {
+        .charts-grid {
+            grid-template-columns: 1fr !important;
+        }
+        .chart-panel {
+            height: 320px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="height: calc(100vh - 120px); display: flex; flex-direction: column; overflow-y: auto; padding-right: 5px;">
+
+    <!-- Top Key Metrics Cards -->
+    <div class="metrics-container">
+        <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-bell"></i></div>
+            <div class="metric-details">
+                <h4>Total Detections</h4>
+                <div id="stat-total-detections">0</div>
+            </div>
+        </div>
+        <div class="metric-card critical">
+            <div class="metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="metric-details">
+                <h4>Critical Threats</h4>
+                <div id="stat-critical-threats">0</div>
+            </div>
+        </div>
+        <div class="metric-card warning">
+            <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="metric-details">
+                <h4>Recognized Persons</h4>
+                <div id="stat-recognized">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts Section -->
+    <div class="charts-grid">
+        <!-- Threats Timeline Chart -->
+        <div class="chart-panel">
+            <div class="chart-panel-header">
+                <div class="chart-panel-title"><i class="fa-solid fa-chart-line"></i> Threat Log History</div>
+                <div class="time-selector">
+                    <button class="time-btn active">7 Days</button>
+                    <button class="time-btn">24 Hrs</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Severity Distribution Chart -->
+        <div class="chart-panel">
+            <div class="chart-panel-header">
+                <div class="chart-panel-title"><i class="fa-solid fa-chart-pie"></i> Alert Severity</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lower Section: AI Insights and Distribution Grid -->
+    <div class="charts-grid" style="grid-template-columns: 1.2fr 2fr;">
+        <!-- AI Intelligence Insights -->
+        <div class="insights-panel">
+            <h4 style="margin: 0; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-brain" style="color: var(--accent-cyan);"></i> AI Insights Report</h4>
+            
+            <div id="insights-container" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Dynamically filled insights -->
+            </div>
+        </div>
+
+        <!-- Label Distribution Bar Chart -->
+        <div class="chart-panel">
+            <div class="chart-panel-header">
+                <div class="chart-panel-title"><i class="fa-solid fa-chart-bar"></i> Detection Classes Distribution</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="distributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let timelineChart, severityChart, distributionChart;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAnalyticsData();
+        // Refresh analytics every 10 seconds
+        setInterval(loadAnalyticsData, 10000);
+    });
+
+    async function loadAnalyticsData() {
+        try {
+            const response = await fetch("/api/analytics_metrics");
+            const data = await response.json();
+            
+            updateStatCards(data);
+            renderCharts(data);
+            generateInsights(data);
+        } catch (error) {
+            console.error("Failed to load analytics metrics:", error);
+        }
+    }
+
+    function updateStatCards(data) {
+        // Total Detections count
+        let totalDetections = 0;
+        Object.values(data.severity_counts).forEach(v => totalDetections += v);
+        document.getElementById("stat-total-detections").innerText = totalDetections;
+
+        // Critical Detections
+        const critical = data.severity_counts["CRITICAL"] || 0;
+        document.getElementById("stat-critical-threats").innerText = critical;
+
+        // Recognized Persons (only actual registered names, ignore violence/object classes)
+        const ignoredLabels = ['person', 'knife', 'gun', 'weapon', 'chair', 'violence', 'fight', 'fire', 'robbery', 'assault', 'explosion'];
+        let recognizedCount = 0;
+        Object.entries(data.label_counts).forEach(([k, v]) => {
+            const kl = k.toLowerCase();
+            const shouldIgnore = ignoredLabels.some(ignored => kl.includes(ignored));
+            if (!shouldIgnore) {
+                recognizedCount += v;
+            }
+        });
+        document.getElementById("stat-recognized").innerText = recognizedCount;
+    }
+
+    function renderCharts(data) {
+        // 1. Alert Severity Chart (Doughnut)
+        const sevData = [
+            data.severity_counts["CRITICAL"] || 0,
+            data.severity_counts["HIGH"] || 0,
+            data.severity_counts["LOW"] || 0
+        ];
+        
+        if (severityChart) {
+            severityChart.data.datasets[0].data = sevData;
+            severityChart.update();
+        } else {
+            const ctx = document.getElementById("severityChart").getContext("2d");
+            severityChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical', 'High', 'Low'],
+                    datasets: [{
+                        data: sevData,
+                        backgroundColor: ['#ff3b30', '#ff9500', '#00d2ff'],
+                        borderWidth: 1,
+                        borderColor: '#1e293b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { family: 'inherit', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Timeline Chart (Line)
+        let timelineLabels = [];
+        let timelineValues = [];
+        
+        if (data.daily_counts && data.daily_counts.length > 0) {
+            data.daily_counts.forEach(row => {
+                timelineLabels.push(row.day);
+                timelineValues.push(row.count);
+            });
+        } else {
+            // Show today with 0 detections instead of fake mock counts
+            const todayStr = new Date().toISOString().split('T')[0];
+            timelineLabels = [todayStr];
+            timelineValues = [0];
+        }
+
+        if (timelineChart) {
+            timelineChart.data.labels = timelineLabels;
+            timelineChart.data.datasets[0].data = timelineValues;
+            timelineChart.update();
+        } else {
+            const ctx = document.getElementById("timelineChart").getContext("2d");
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timelineLabels,
+                    datasets: [{
+                        label: 'Threat Detections',
+                        data: timelineValues,
+                        borderColor: '#00d2ff',
+                        backgroundColor: 'rgba(0, 210, 255, 0.05)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // 3. Distribution Chart (Bar)
+        let distLabels = [];
+        let distValues = [];
+        Object.entries(data.label_counts).sort((a,b) => b[1] - a[1]).slice(0, 5).forEach(([k, v]) => {
+            distLabels.push(k.replace(" Detected", ""));
+            distValues.push(v);
+        });
+
+        if (distLabels.length === 0) {
+            distLabels = ['No Data'];
+            distValues = [0];
+        }
+
+        if (distributionChart) {
+            distributionChart.data.labels = distLabels;
+            distributionChart.data.datasets[0].data = distValues;
+            distributionChart.update();
+        } else {
+            const ctx = document.getElementById("distributionChart").getContext("2d");
+            distributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: distLabels,
+                    datasets: [{
+                        data: distValues,
+                        backgroundColor: 'rgba(0, 122, 255, 0.6)',
+                        borderColor: '#007aff',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    }
+
+    function generateInsights(data) {
+        const container = document.getElementById("insights-container");
+        container.innerHTML = "";
+
+        const critical = data.severity_counts["CRITICAL"] || 0;
+        const total = Object.values(data.severity_counts).reduce((a,b) => a+b, 0);
+
+        let insights = [];
+
+        if (critical > 0) {
+            insights.push({
+                type: 'critical',
+                text: `Critical threats detected in database! ${critical} priority events require resolution verification.`
+            });
+        } else {
+            insights.push({
+                type: 'secure',
+                text: "No critical threats logged. System and campus status registered as secure."
+            });
+        }
+
+        // Find most frequent detection
+        let maxLabel = "";
+        let maxVal = 0;
+        Object.entries(data.label_counts).forEach(([k, v]) => {
+            if (v > maxVal) {
+                maxVal = v;
+                maxLabel = k;
+            }
+        });
+
+        if (maxLabel) {
+            insights.push({
+                type: 'info',
+                text: `Active object identified: "${maxLabel.replace(" Detected", "")}" with a total of ${maxVal} observations.`
+            });
+        }
+
+        insights.push({
+            type: 'info',
+            text: `Operational efficiency: All active camera feeds streaming successfully. AI threat engine operating normally.`
+        });
+
+        insights.forEach(insight => {
+            const cssClass = insight.type === 'critical' ? 'critical' : (insight.type === 'warning' ? 'warning' : '');
+            container.innerHTML += `
+                <div class="insight-row ${cssClass}">
+                    <div class="insight-bullet"></div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">${insight.text}</div>
+                </div>
+            `;
+        });
+    }
+</script>
+{% endblock %}

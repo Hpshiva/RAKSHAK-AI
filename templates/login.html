@@ -5,10 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rakshak AI | Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-
+    <!-- Removed base.css to prevent conflict, only need login.css for this UI -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <!-- Using Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <script>
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    </script>
 </head>
 
 <body>
@@ -24,8 +30,7 @@
 
         <div class="login-card">
 
-            <h2 style="text-align: center;">Welcome Back</h2>
-
+            <h2>Welcome Back</h2>
             <p class="subtitle">
                 Sign in to School Security Dashboard
             </p>
@@ -33,39 +38,24 @@
             <form id="loginForm" method="POST" action="/">
 
                 <div class="input-group">
-
-                    <span class="icon">📧</span>
-
+                    <span class="icon"><i class="fa-solid fa-id-card"></i></span>
                     <input type="email" id="email" name="email" placeholder="School Email" required>
-
                 </div>
 
                 <div class="input-group">
-
-                    <span class="icon">🔒</span>
-
+                    <span class="icon"><i class="fa-solid fa-lock"></i></span>
                     <input type="password" id="password" name="password" placeholder="Password" required>
-
                     <span class="toggle-password" onclick="togglePassword()">
-
-                        👁
-
+                        <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
                     </span>
-
                 </div>
 
                 <div class="options">
-
                     <label>
-
                         <input type="checkbox" name="remember">
-
                         Remember Me
-
                     </label>
-
                     <a href="/forgot_password">Forgot Password?</a>
-
                 </div>
 
                 {% if error %}
@@ -75,11 +65,8 @@
                 {% endif %}
 
                 <button type="submit">
-
                     <i class="fa-solid fa-right-to-bracket"></i>
-
-                    LOGIN
-
+                    ACCESS COMMAND CENTER
                 </button>
 
                 <div class="security-badge">
@@ -87,14 +74,31 @@
                     Authorized Access Only
                 </div>
 
-            </form>
+                <div class="footer">
+                    Powered by AI &bull; Robotics &bull; Computer Vision
+                </div>
 
+            </form>
 
         </div>
 
     </div>
 
-    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById("password");
+            const toggleIcon = document.getElementById("togglePasswordIcon");
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                toggleIcon.classList.remove("fa-eye");
+                toggleIcon.classList.add("fa-eye-slash");
+            } else {
+                passwordInput.type = "password";
+                toggleIcon.classList.remove("fa-eye-slash");
+                toggleIcon.classList.add("fa-eye");
+            }
+        }
+    </script>
 </body>
 
 </html>

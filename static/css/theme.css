@@ -1,0 +1,36 @@
+/* ==========================================================
+                    RAKSHAK AI - GLOBAL THEME BUTTON
+========================================================== */
+
+.theme-toggle-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+    background: rgba(128, 128, 128, 0.2);
+    transform: scale(1.1);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+/* Base Light Mode variables for general use if not already in specific files */
+:root {
+    --global-text-color: #111827;
+}
+
+/* Base Dark Mode overrides */
+[data-theme="dark"] {
+    --global-text-color: #ffffff;
+}
