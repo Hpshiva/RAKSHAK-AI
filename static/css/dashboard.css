@@ -481,6 +481,14 @@ body{
     display: block;
 }
 
+.dashboard-camera-feed {
+    width: 100%;
+    height: calc(100vh - 420px);
+    min-height: 210px;
+    object-fit: cover;
+    object-position: center;
+}
+
 .map-card{
 
     min-height:320px;

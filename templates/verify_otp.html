@@ -22,13 +22,13 @@
         </div>
         <div class="login-card">
             <h2>Enter OTP</h2>
-            <p class="subtitle">Enter the 6-digit OTP sent to {{ email }}</p>
+            <p class="subtitle">Enter the 6-digit OTP sent to {{ email|default('your admin email') }}</p>
             <form method="POST" action="/verify_otp">
                 <div class="input-group">
                     <span class="icon"><i class="fa-solid fa-key"></i></span>
                     <input type="text" id="otp" name="otp" placeholder="6-Digit OTP" required pattern="\d{6}" maxlength="6">
                 </div>
-                {% if error %}
+                {% if error|default %}
                 <div class="login-error">{{ error }}</div>
                 {% endif %}
                 <button type="submit"><i class="fa-solid fa-check-circle"></i> VERIFY & LOGIN</button>

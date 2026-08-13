@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
+        // Security policy: refreshing any authenticated page requires a fresh login.
+        const navigationEntry = performance.getEntriesByType('navigation')[0];
+        const isPageReload = navigationEntry
+            ? navigationEntry.type === 'reload'
+            : performance.navigation && performance.navigation.type === 1;
+
+        if (isPageReload) {
+            window.location.replace("{{ url_for('logout') }}");
+        }
+
         if (localStorage.getItem('theme') === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
         }
@@ -170,6 +180,78 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        .icon-btn.is-listening {
+            color: #001018;
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 6px rgba(0, 210, 255, 0.12), 0 0 22px rgba(0, 210, 255, 0.45);
+            animation: voice-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes voice-pulse {
+            50% { transform: scale(1.08); }
+        }
+
+        .voice-feedback {
+            position: fixed;
+            top: 78px;
+            right: 24px;
+            z-index: 1200;
+            max-width: min(360px, calc(100vw - 32px));
+            padding: 11px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--panel-bg);
+            color: var(--text-primary);
+            box-shadow: 0 14px 35px rgba(0, 0, 0, .4);
+            font-size: .8rem;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-8px);
+            transition: opacity .2s, transform .2s;
+        }
+
+        .voice-feedback.show { opacity: 1; transform: translateY(0); }
+        .voice-feedback.error { border-color: rgba(239, 68, 68, .45); color: var(--accent-red); }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 150px;
+            padding: 8px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            display: none;
+            z-index: 1100;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .logout-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 7px;
+            color: var(--accent-red);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .logout-link:hover {
+            background: rgba(239, 68, 68, 0.12);
+        }
+
         .badge-dot {
             position: absolute;
             top: -2px;
@@ -233,6 +315,21 @@
         }
         .notification-item:last-child { border-bottom: none; }
         .notification-item .time { color: var(--text-secondary); font-size: 0.7rem; margin-top: 4px; display: block; }
+
+        .clear-notifications-btn {
+            border: 0;
+            background: transparent;
+            color: var(--accent-cyan);
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 5px 7px;
+            border-radius: 6px;
+        }
+
+        .clear-notifications-btn:hover {
+            background: rgba(0, 210, 255, 0.1);
+        }
 
         /* Common Utility Classes */
         .dashboard-grid {
@@ -324,8 +421,17 @@
                     <i class="fa-solid fa-bell"></i>
                     <div class="badge-dot" id="bell-badge"></div>
                 </button>
-                <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
-                <a href="/logout" class="icon-btn"><i class="fa-solid fa-user"></i></a>
+                <button type="button" class="icon-btn" id="voiceBtn" title="Enable voice standby — wake word: Hey Rakshak" aria-label="Enable voice standby" aria-pressed="false"><i class="fa-solid fa-microphone"></i></button>
+                <div class="user-menu">
+                    <button type="button" class="icon-btn" id="user-menu-toggle" aria-label="Open user menu" aria-expanded="false">
+                        <i class="fa-solid fa-user"></i>
+                    </button>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="{{ url_for('logout') }}" class="logout-link">
+                            <i class="fa-solid fa-right-from-bracket"></i> Logout
+                        </a>
+                    </div>
+                </div>
                 <div class="time-badge" id="clock">--:--:-- --</div>
             </div>
             
@@ -333,7 +439,9 @@
             <div class="notification-dropdown" id="notification-dropdown">
                 <div class="notification-header">
                     <span>Notifications</span>
-                    <i class="fa-solid fa-check-double" style="cursor:pointer; color:var(--text-secondary);" title="Mark all as read" onclick="clearBadge()"></i>
+                    <button type="button" class="clear-notifications-btn" onclick="clearNotifications()" title="Clear visible notifications">
+                        <i class="fa-solid fa-trash-can"></i> Clear All
+                    </button>
                 </div>
                 <div class="notification-body" id="nav-notifications-container">
                     <div style="padding:10px; color:var(--text-secondary); text-align:center;">No recent alerts.</div>
@@ -345,6 +453,9 @@
 
     </div>
 
+    <div class="voice-feedback" id="voiceStatus" role="status" aria-live="polite"></div>
+
+    <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
     <script>
         // Clock Update
         function updateClock() {
@@ -397,6 +508,10 @@
         bellToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             notifDropdown.classList.toggle('show');
+            const openUserDropdown = document.getElementById('user-dropdown');
+            const openUserToggle = document.getElementById('user-menu-toggle');
+            openUserDropdown.classList.remove('show');
+            openUserToggle.setAttribute('aria-expanded', 'false');
             clearBadge();
         });
         
@@ -410,12 +525,63 @@
             bellBadge.classList.remove('active');
         }
 
+        // User menu
+        const userMenuToggle = document.getElementById('user-menu-toggle');
+        const userDropdown = document.getElementById('user-dropdown');
+
+        userMenuToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = userDropdown.classList.toggle('show');
+            userMenuToggle.setAttribute('aria-expanded', String(isOpen));
+            notifDropdown.classList.remove('show');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!userDropdown.contains(event.target) && !userMenuToggle.contains(event.target)) {
+                userDropdown.classList.remove('show');
+                userMenuToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
         let lastNotificationCount = 0;
+        let currentNotificationIds = [];
+
+        function getDismissedNotificationIds() {
+            try {
+                return new Set(JSON.parse(localStorage.getItem('dismissedNotificationIds') || '[]'));
+            } catch (error) {
+                return new Set();
+            }
+        }
+
+        function getNotificationKey(notification) {
+            if (notification.id !== undefined && notification.id !== null) {
+                return `id:${notification.id}`;
+            }
+            return `event:${notification.detected_at}|${notification.label}|${notification.camera}`;
+        }
+
+        function clearNotifications() {
+            const dismissed = getDismissedNotificationIds();
+            currentNotificationIds.forEach(id => dismissed.add(id));
+            const recentDismissed = Array.from(dismissed).slice(-100);
+            localStorage.setItem('dismissedNotificationIds', JSON.stringify(recentDismissed));
+            currentNotificationIds = [];
+            lastNotificationCount = 0;
+            bellBadge.classList.remove('active');
+            document.getElementById('nav-notifications-container').innerHTML =
+                '<div style="padding:10px; color:var(--text-secondary); text-align:center;">No recent alerts.</div>';
+        }
         
         async function fetchGlobalNotifications() {
             try {
                 const response = await fetch('/api/recent_faces');
-                const faces = await response.json();
+                const payload = await response.json();
+                const dismissed = getDismissedNotificationIds();
+                const faces = Array.isArray(payload)
+                    ? payload.filter(face => !dismissed.has(getNotificationKey(face)))
+                    : [];
+                currentNotificationIds = faces.map(getNotificationKey);
                 
                 const container = document.getElementById('nav-notifications-container');
                 if (!container) return;
@@ -437,7 +603,14 @@
                 faces.forEach(face => {
                     const el = document.createElement('div');
                     el.className = 'notification-item';
-                    let timeStr = new Date(face.detected_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const detectedAt = new Date(face.detected_at);
+                    let timeStr = Number.isNaN(detectedAt.getTime())
+                        ? '--:--'
+                        : detectedAt.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
                     
                     let dotColor = 'var(--accent-cyan)';
                     if(face.severity === 'CRITICAL') dotColor = 'var(--accent-red)';

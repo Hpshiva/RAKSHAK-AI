@@ -58,15 +58,15 @@
                     <a href="/forgot_password">Forgot Password?</a>
                 </div>
 
-                {% if error %}
+                {% if error|default %}
                 <div class="login-error">
                     {{ error }}
                 </div>
                 {% endif %}
 
-                <button type="submit">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-                    ACCESS COMMAND CENTER
+                <button type="submit" id="loginSubmitBtn">
+                    <i class="fa-solid fa-right-to-bracket" id="loginSubmitIcon"></i>
+                    <span id="loginSubmitText">ACCESS COMMAND CENTER</span>
                 </button>
 
                 <div class="security-badge">
@@ -98,6 +98,18 @@
                 toggleIcon.classList.add("fa-eye");
             }
         }
+
+        const loginForm = document.getElementById("loginForm");
+        const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+        const loginSubmitIcon = document.getElementById("loginSubmitIcon");
+        const loginSubmitText = document.getElementById("loginSubmitText");
+
+        loginForm.addEventListener("submit", () => {
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.classList.add("is-loading");
+            loginSubmitIcon.className = "fa-solid fa-spinner fa-spin";
+            loginSubmitText.textContent = "AUTHENTICATING...";
+        });
     </script>
 </body>
 

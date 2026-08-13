@@ -68,7 +68,6 @@ def initialize_database():
     )
     """)
 
-    cursor.execute("DELETE FROM detections WHERE label = 'person'")
     conn.commit()
     conn.close()
 
@@ -131,7 +130,9 @@ def get_recent_face_detections(limit=5):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT label, camera, detected_at, severity
+        SELECT id, label, camera,
+               strftime('%Y-%m-%dT%H:%M:%SZ', detected_at) AS detected_at,
+               severity
         FROM detections
         WHERE label != 'person' AND label != 'knife' AND label != 'gun' AND label NOT LIKE 'person%'
         ORDER BY id DESC

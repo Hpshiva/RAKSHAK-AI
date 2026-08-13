@@ -120,6 +120,56 @@
         color: #ffffff;
         transform: scale(1.05);
     }
+
+    .camera-power-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 108px;
+        padding: 6px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        background: rgba(148, 163, 184, .08);
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: .74rem;
+        font-weight: 700;
+        transition: background .25s, border-color .25s, color .25s, box-shadow .25s;
+    }
+
+    .camera-power-track {
+        position: relative;
+        width: 34px;
+        height: 18px;
+        flex: 0 0 34px;
+        border-radius: 20px;
+        background: #334155;
+        transition: background .25s;
+    }
+
+    .camera-power-knob {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
+        transition: transform .25s cubic-bezier(.22, 1, .36, 1);
+    }
+
+    .camera-power-toggle.is-on {
+        color: #44f19a;
+        border-color: rgba(16, 185, 129, .42);
+        background: rgba(16, 185, 129, .12);
+        box-shadow: 0 0 16px rgba(16, 185, 129, .12);
+    }
+
+    .camera-power-toggle.is-on .camera-power-track { background: var(--accent-green); }
+    .camera-power-toggle.is-on .camera-power-knob { transform: translateX(16px); }
+    .camera-power-toggle:hover { border-color: var(--accent-cyan); }
+    .camera-power-toggle:disabled { cursor: wait; opacity: .65; }
 </style>
 {% endblock %}
 
@@ -229,7 +279,10 @@
                             Camera ${camId}
                             <span class="pill badge-orange offline-pill" style="margin-left: 5px;">Offline</span>
                         </div>
-                        <button onclick="toggleWebcam(this, ${camId})" class="btn-camera-toggle">Turn On</button>
+                        <button type="button" onclick="toggleWebcam(this, ${camId})" class="camera-power-toggle" aria-pressed="false" title="Turn Camera ${camId} on or off">
+                            <span class="camera-power-track" aria-hidden="true"><span class="camera-power-knob"></span></span>
+                            <span class="camera-power-label">Turn On</span>
+                        </button>
                     </div>
                     <div style="position: relative; background: #000;">
                         <img src="/camera_feed/${camId}" style="width: 100%; display: block;" alt="Camera ${camId}">
@@ -242,6 +295,7 @@
                     </div>
                 `;
                 container.appendChild(card);
+                syncCameraStatus(card.querySelector('.camera-power-toggle'), camId);
             });
         } catch (err) {
             console.error("Failed to load cameras", err);
@@ -309,25 +363,50 @@
     fetchDetections();
     setInterval(fetchDetections, 2000);
 
-    async function toggleWebcam(btn, camId) {
-        const res = await fetch('/api/toggle_webcam', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ camera_id: camId })
-        });
-        const data = await res.json();
+    function updateCameraToggle(btn, camId, enabled) {
         const headerDiv = btn.previousElementSibling;
         const pill = headerDiv.querySelector('.offline-pill');
         const dot = document.getElementById('webcam-dot-' + camId);
-        
-        if (data.webcam_enabled) {
-            btn.textContent = "Turn Off";
+        const label = btn.querySelector('.camera-power-label');
+
+        btn.classList.toggle('is-on', enabled);
+        btn.setAttribute('aria-pressed', String(enabled));
+        label.textContent = enabled ? 'Turn Off' : 'Turn On';
+
+        if (enabled) {
             dot.style.display = 'block';
             if(pill) { pill.className = 'pill badge-red offline-pill'; pill.textContent = 'Live'; }
         } else {
-            btn.textContent = "Turn On";
             dot.style.display = 'none';
             if(pill) { pill.className = 'pill badge-orange offline-pill'; pill.textContent = 'Offline'; }
+        }
+    }
+
+    async function syncCameraStatus(btn, camId) {
+        try {
+            const response = await fetch(`/api/webcam_status/${camId}`);
+            const data = await response.json();
+            updateCameraToggle(btn, camId, Boolean(data.webcam_enabled));
+        } catch (error) {
+            console.error(`Could not read Camera ${camId} status`, error);
+        }
+    }
+
+    async function toggleWebcam(btn, camId) {
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/toggle_webcam', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ camera_id: camId })
+            });
+            if (!res.ok) throw new Error(`Camera toggle failed (${res.status})`);
+            const data = await res.json();
+            updateCameraToggle(btn, camId, Boolean(data.webcam_enabled));
+        } catch (error) {
+            console.error(`Could not toggle Camera ${camId}`, error);
+        } finally {
+            btn.disabled = false;
         }
     }
 

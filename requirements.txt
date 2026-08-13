@@ -46,7 +46,6 @@ networkx==3.6.1
 numpy==2.5.0
 nvidia-ml-py==13.610.43
 opencv-contrib-python==5.0.0.93
-opencv-python==5.0.0.93
 packaging==26.2
 pandas==3.0.3
 pillow==12.3.0
@@ -55,6 +54,7 @@ polars-runtime-32==1.42.1
 proto-plus==1.28.0
 protobuf==7.35.1
 psutil==7.2.2
+pyttsx3>=2.99
 pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pycparser==3.0

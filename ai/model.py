@@ -21,12 +21,13 @@ class Model:
         )
 
         self.model_name = self.settings["model-settings"]["model-name"]
+        self.pretrained = self.settings["model-settings"].get("pretrained", "openai")
         self.threshold = self.settings["model-settings"]["prediction-threshold"]
 
         # Load CLIP model
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(
             model_name=self.model_name,
-            pretrained="openai",
+            pretrained=self.pretrained,
             device=self.device
         )
         self.tokenizer = open_clip.get_tokenizer(self.model_name)

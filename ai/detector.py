@@ -5,7 +5,7 @@ import time
 import pyttsx3
 from datetime import datetime
 from database import save_detection, should_save_detection
-from ultralytics import YOLO
+from ultralytics import YOLO, YOLOE
 from ai.face_recognition import FaceRecognizer
 
 # ==========================================
@@ -17,10 +17,47 @@ print(" Loading Rakshak AI Detector...")
 print("======================================")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "yolov8x.pt")
+YOLO_CONFIDENCE = float(os.environ.get("YOLO_CONFIDENCE", "0.45"))
+YOLO_IMAGE_SIZE = int(os.environ.get("YOLO_IMAGE_SIZE", "480"))
+VIOLENCE_CHECK_INTERVAL = int(os.environ.get("VIOLENCE_CHECK_INTERVAL", "30"))
+FACE_CHECK_INTERVAL = int(os.environ.get("FACE_CHECK_INTERVAL", "3"))
+THREAT_CHECK_INTERVAL = int(os.environ.get("THREAT_CHECK_INTERVAL", "4"))
+THREAT_CONFIDENCE = float(os.environ.get("THREAT_CONFIDENCE", "0.15"))
+THREAT_IMAGE_SIZE = int(os.environ.get("THREAT_IMAGE_SIZE", "480"))
+MODEL_PATH = os.environ.get(
+    "YOLO_MODEL_PATH",
+    os.path.join(BASE_DIR, "models", "yolo26s.pt"),
+)
 model = YOLO(MODEL_PATH)
 
-print(" YOLO Model Loaded Successfully")
+print(f" YOLO Model Loaded Successfully: {os.path.basename(MODEL_PATH)}")
+print(
+    f" Detection tuning: conf={YOLO_CONFIDENCE:.2f}, imgsz={YOLO_IMAGE_SIZE}, "
+    f"violence_every={VIOLENCE_CHECK_INTERVAL}, face_every={FACE_CHECK_INTERVAL}"
+)
+
+THREAT_CLASSES = [
+    "knife", "handgun", "pistol", "firearm", "syringe",
+]
+THREAT_LABELS = {
+    "handgun": "gun",
+    "pistol": "gun",
+    "firearm": "gun",
+}
+threat_model = None
+try:
+    threat_model_path = os.path.join(BASE_DIR, "models", "yoloe-26s-seg.pt")
+    models_dir = os.path.dirname(threat_model_path)
+    previous_directory = os.getcwd()
+    os.chdir(models_dir)
+    try:
+        threat_model = YOLOE(threat_model_path)
+        threat_model.set_classes(THREAT_CLASSES)
+    finally:
+        os.chdir(previous_directory)
+    print(" Threat Model Loaded Successfully: YOLOE-26s open vocabulary")
+except Exception as error:
+    print(f" Threat model unavailable; continuing with standard YOLO: {error}")
 
 from ai.model import Model
 print(" Loading Violence Detection Model...")
@@ -77,6 +114,9 @@ class CameraState:
         self.last_screenshot_trigger_time = 0
         self.last_recognized_name = None
         self.last_recognized_time = 0
+        self.cached_faces = []
+        self.cached_threat_boxes = []
+        self.last_prohibited_item_time = 0
 
 camera_states = {}
 
@@ -145,6 +185,20 @@ def add_detection(label, confidence, threat, camera_name):
 
     last_memory_alert[label] = current_time
 
+    # The in-memory feed and database audit must be written from the same
+    # proven event path. This prevents alerts from appearing on the dashboard
+    # while the audit history remains empty.
+    try:
+        if should_save_detection(label, camera_name):
+            save_detection(
+                label=label,
+                confidence=confidence,
+                severity=threat,
+                camera=camera_name,
+            )
+    except Exception as error:
+        print(f"Failed to persist detection '{label}' from {camera_name}: {error}")
+
     event = {
         "time": datetime.now().strftime("%H:%M:%S"),
         "label": event_label,
@@ -186,7 +240,6 @@ def draw_box(frame, coords, confidence, color, label):
 # ==========================================
 # ASYNC AI WORKER THREAD
 # ==========================================
-import time
 def ai_worker():
     while True:
         frames_to_process = []
@@ -205,23 +258,28 @@ def ai_worker():
             current_time = time.time()
             
             try:
-                # 1. Violence / Threat Detection (every 5 frames to save CPU)
-                if state.frame_count_ai % 5 == 0:
+                # ViT-L takes ~2.2s on this CPU, so run it periodically instead
+                # of blocking almost every YOLO update.
+                if state.frame_count_ai % VIOLENCE_CHECK_INTERVAL == 0:
                     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     violence_prediction = violence_model.predict(image=rgb_frame)
                     state.last_violence_label = violence_prediction['label']
                     state.last_violence_confidence = violence_prediction['confidence']
                     
                     if state.last_violence_label in VIOLENCE_LABELS:
-                        
-                        # Use Face Recognition to identify attackers
-                        recognized_faces = face_recognizer.recognize_faces(frame)
-                        attacker_info = ""
-                        if recognized_faces:
-                            # Filter out duplicates and format
+                        # A quiet period marks a new incident and allows a fresh
+                        # pair of evidence screenshots to be captured.
+                        if current_time - state.last_violence_time > 10:
                             state.screenshot_count_this_event = 0
-                        
                         state.last_violence_time = current_time
+
+                        if should_save_detection(state.last_violence_label, state.name):
+                            save_detection(
+                                label=state.last_violence_label,
+                                confidence=round(state.last_violence_confidence * 100, 1),
+                                severity="CRITICAL",
+                                camera=state.name,
+                            )
                         
                         # Only save max 2 screenshots per violence event, separated by at least 2 seconds
                         if state.screenshot_count_this_event < 2 and (current_time - state.last_screenshot_trigger_time > 2):
@@ -248,37 +306,71 @@ def ai_worker():
                         if current_time - state.last_audio_alert_time > 10:
                             state.last_audio_alert_time = current_time
                                 
-                            def _speak_alert():
+                            camera_name = state.name
+                            violence_label = state.last_violence_label
+
+                            def _speak_alert(name=camera_name, label=violence_label):
                                 try:
-                                    clean_name = state.name.replace(" (Live)", "")
-                                    
                                     # Format the spoken text to sound more natural
-                                    spoken_text = state.last_violence_label
+                                    spoken_text = label
                                     import platform
                                     if platform.system() == "Darwin":
                                         import subprocess
-                                        subprocess.run(['say', f"Violence detected. [[slnc 600]] {spoken_text}"])
+                                        subprocess.run(
+                                            ['say', f"Violence detected at {name}. [[slnc 600]] {spoken_text}"],
+                                            check=False,
+                                        )
                                     else:
                                         engine = pyttsx3.init()
                                         engine.setProperty('rate', 160)
-                                        engine.say(f"Violence detected. , , , {spoken_text}")
+                                        engine.say(f"Violence detected at {name}. {spoken_text}")
                                         engine.runAndWait()
                                 except Exception as e:
                                     print("Audio alert error:", e)
                             threading.Thread(target=_speak_alert, daemon=True).start()
 
-                # 2. YOLO Object Detection
-                results = model.predict(source=frame, conf=0.85, imgsz=640, verbose=False)
+                # 2. Open-vocabulary prohibited-item detection. Results are
+                # cached so red threat boxes remain visible between checks.
+                if threat_model is not None and state.frame_count_ai % THREAT_CHECK_INTERVAL == 0:
+                    threat_results = threat_model.predict(
+                        source=frame,
+                        conf=THREAT_CONFIDENCE,
+                        imgsz=THREAT_IMAGE_SIZE,
+                        verbose=False,
+                        agnostic_nms=True,
+                    )[0]
+                    detected_threats = []
+                    for threat_box in threat_results.boxes:
+                        threat_class = int(threat_box.cls[0])
+                        raw_label = threat_model.names[threat_class]
+                        threat_label = THREAT_LABELS.get(raw_label, raw_label)
+                        threat_confidence = round(float(threat_box.conf[0]) * 100, 1)
+                        threat_coords = tuple(map(int, threat_box.xyxy[0]))
+                        detected_threats.append(
+                            (threat_coords, threat_confidence, RED, threat_label)
+                        )
+                        add_detection(threat_label, threat_confidence, "CRITICAL", state.name)
+                    state.cached_threat_boxes = detected_threats
+                    if detected_threats:
+                        state.last_prohibited_item_time = current_time
+
+                # 3. Standard fast YOLO object detection
+                results = model.predict(
+                    source=frame,
+                    conf=YOLO_CONFIDENCE,
+                    imgsz=YOLO_IMAGE_SIZE,
+                    verbose=False,
+                )
                 result = results[0]
 
-                new_boxes = []
+                new_boxes = list(state.cached_threat_boxes)
                 current_person_count = 0
                 
                 # Run face recognition if there's any person
                 has_person = any(model.names[int(box.cls[0])] == "person" for box in result.boxes)
-                recognized_faces = []
-                if has_person:
-                    recognized_faces = face_recognizer.recognize_faces(frame)
+                if has_person and state.frame_count_ai % FACE_CHECK_INTERVAL == 0:
+                    state.cached_faces = face_recognizer.recognize_faces(frame)
+                recognized_faces = state.cached_faces if has_person else []
 
                 for box in result.boxes:
                     cls = int(box.cls[0])
@@ -316,10 +408,11 @@ def ai_worker():
                         new_boxes.append((coords, confidence, color, class_name))
                         
                         add_detection(class_name, confidence, threat, state.name)
-                        if class_name != "person" and should_save_detection(class_name, state.name):
-                            save_detection(label=class_name, confidence=confidence, severity=threat, camera=state.name)
                     else:
-                        new_boxes.append((coords, confidence, GREEN, class_name))
+                        object_threat = "HIGH" if class_name in {"knife", "gun", "syringe"} else "LOW"
+                        object_color = ORANGE if object_threat == "HIGH" else GREEN
+                        new_boxes.append((coords, confidence, object_color, class_name))
+                        add_detection(class_name, confidence, object_threat, state.name)
                 
                 state.person_count = current_person_count
                 state.cached_boxes = new_boxes
@@ -354,7 +447,11 @@ def detect(frame, camera_id="0", camera_name="Main Gate"):
 
         # Threat Assessment
         is_violent = (state.last_violence_label in VIOLENCE_LABELS)
-        threat, _ = get_threat_level(state.person_count, is_violent)
+        prohibited_item_active = time.time() - state.last_prohibited_item_time < 5
+        threat, _ = get_threat_level(
+            state.person_count,
+            is_violent or prohibited_item_active,
+        )
         
         if is_violent:
             cv2.putText(frame, f"CRITICAL: {state.last_violence_label.upper()}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, RED, 3)

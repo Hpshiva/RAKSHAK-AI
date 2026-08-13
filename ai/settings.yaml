@@ -1,7 +1,7 @@
 model-settings:
-  prediction-threshold: 0.20
+  prediction-threshold: 0.24
   model-name: "ViT-L-14"
-  pretrained: "openai"
+  pretrained: "datacomp_xl_s13b_b90k"
   device: "cpu"
 
 label-settings:

@@ -129,7 +129,32 @@ body {
     background: var(--login-card-bg);
     border: 1px solid var(--login-card-border);
     box-shadow: var(--login-card-shadow);
-    transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+    transform: translateY(0) scale(1);
+    transform-origin: center;
+    will-change: transform, box-shadow;
+    transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.3s,
+        border-color 0.3s,
+        box-shadow 0.35s ease;
+}
+
+.login-card:hover {
+    transform: translateY(-10px) scale(1.015);
+    border-color: rgba(0, 210, 255, 0.28);
+    box-shadow:
+        0 28px 55px rgba(0, 0, 0, 0.55),
+        0 12px 30px rgba(0, 210, 255, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-card {
+        transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .login-card:hover {
+        transform: none;
+    }
 }
 
 .login-card h2 {
@@ -244,6 +269,11 @@ body {
     text-decoration: underline;
 }
 
+.recovery-options {
+    justify-content: center;
+    margin-top: 15px;
+}
+
 .login-card button {
     width: 100%;
     height: 48px;
@@ -269,6 +299,19 @@ body {
 
 .login-card button:active {
     transform: scale(.98);
+}
+
+.login-card button.is-loading,
+.login-card button:disabled {
+    cursor: wait;
+    opacity: 0.88;
+    transform: none;
+    filter: saturate(0.85);
+    box-shadow: 0 4px 18px rgba(0, 210, 255, 0.32);
+}
+
+.login-card button.is-loading:hover {
+    transform: none;
 }
 
 .login-error {

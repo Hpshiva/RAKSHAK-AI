@@ -251,6 +251,7 @@
 
 {% block scripts %}
 <script>
+    const canDeleteFaces = {{ 'true' if session.get('role') == 'admin' else 'false' }};
     document.getElementById('uploadForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -315,9 +316,7 @@
                             <button class="edit-btn" onclick="editFace('${face.filename}', '${face.name}', '${face.role || ''}')" title="Edit">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="delete-btn" onclick="deleteFace('${face.filename}')" title="Delete">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            ${canDeleteFaces ? `<button class="delete-btn" onclick="deleteFace('${face.filename}')" title="Delete"><i class="fa-solid fa-trash"></i></button>` : ''}
                             <img src="/faces_img/${face.filename}" alt="${face.name}">
                             <div class="face-info">
                                 <div class="face-name">${face.name}</div>

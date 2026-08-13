@@ -1,8 +1,10 @@
 from flask import Flask, render_template, Response, jsonify, request, redirect, session, send_from_directory
 import cv2
+import math
 import os
-import random
+import secrets
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
@@ -16,6 +18,16 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "rakshak-ai-2026-fallback")
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload size
+
+
+@app.after_request
+def prevent_authenticated_page_caching(response):
+    """Prevent protected pages being revealed by browser back/forward cache."""
+    if session.get("logged_in"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -214,7 +226,7 @@ def generate_uploaded_video_frames():
         
         # Get FPS for playback pacing
         fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps == 0 or fps != fps:
+        if not math.isfinite(fps) or fps <= 0:
             fps = 30
             
         video_duration = cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps
@@ -282,16 +294,21 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "").strip()
 
-        valid_login = (
-            (email == "principal@rakshakai.edu" and password == "Rakshak@2026") or
-            (email == "tech@rakshakai.edu" and password == "Tech@2026") or
-            (email == "test@gmail.com" and password == "123") or
-            (email == "shrishail2071409" and password == "2071409")
-        )
+        admin_email = os.environ.get("ADMIN_LOGIN_EMAIL", "admin@rakshakai.edu").strip().lower()
+        admin_password = os.environ.get("ADMIN_LOGIN_PASSWORD", "")
+        principal_email = os.environ.get("PRINCIPAL_LOGIN_EMAIL", "principal@rakshakai.edu").strip().lower()
+        principal_password = os.environ.get("PRINCIPAL_LOGIN_PASSWORD", "")
 
-        if valid_login:
+        role = None
+        if email == admin_email and secrets.compare_digest(password, admin_password):
+            role = "admin"
+        elif email == principal_email and secrets.compare_digest(password, principal_password):
+            role = "principal"
+
+        if role:
             session["logged_in"] = True
             session["user"] = email
+            session["role"] = role
             
             # Handle "Remember me"
             if request.form.get("remember"):
@@ -326,11 +343,12 @@ def send_real_otp_email(receiver_email, otp):
         body = f"Hello,\n\nYour one-time password (OTP) for Rakshak AI Admin Login is: {otp}\n\nDo not share this code with anyone."
         msg.attach(MIMEText(body, 'plain'))
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -340,18 +358,28 @@ def send_real_otp_email(receiver_email, otp):
 def forgot_password():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
-        admin_email = os.environ.get("ADMIN_EMAIL", "shrishail2071409@gmail.com").strip().lower()
+        admin_email = os.environ.get("ADMIN_EMAIL", "rakshakadmin@gmail.com").strip().lower()
         
         if email != admin_email:
-            return render_template("forgot_password.html", error="This email is not registered as an admin.")
+            return render_template(
+                "forgot_password.html",
+                error="This email is not registered as an admin.",
+                email=email,
+            )
         
-        otp = str(random.randint(100000, 999999))
+        otp = f"{secrets.randbelow(900000) + 100000:06d}"
         session["reset_otp"] = otp
         session["reset_email"] = email
+        session["reset_otp_expires_at"] = time.time() + 600
+        session["reset_otp_attempts"] = 0
         
         success = send_real_otp_email(email, otp)
         if not success:
-            return render_template("forgot_password.html", error="Failed to send email. Check backend App Password in app.py.")
+            return render_template(
+                "forgot_password.html",
+                error="Failed to send email. Check the SMTP configuration.",
+                email=email,
+            )
             
         return redirect("/verify_otp")
         
@@ -363,8 +391,10 @@ def resend_otp():
     if not email:
         return redirect("/forgot_password")
         
-    otp = str(random.randint(100000, 999999))
+    otp = f"{secrets.randbelow(900000) + 100000:06d}"
     session["reset_otp"] = otp
+    session["reset_otp_expires_at"] = time.time() + 600
+    session["reset_otp_attempts"] = 0
     
     success = send_real_otp_email(email, otp)
     if not success:
@@ -377,16 +407,35 @@ def verify_otp():
     if request.method == "POST":
         otp_entered = request.form.get("otp", "").strip()
         expected_otp = session.get("reset_otp")
-        
+        expires_at = session.get("reset_otp_expires_at", 0)
+        attempts = session.get("reset_otp_attempts", 0)
+
+        if time.time() > expires_at:
+            session.pop("reset_otp", None)
+            session.pop("reset_otp_expires_at", None)
+            return render_template(
+                "verify_otp.html",
+                error="OTP expired. Please request a new code.",
+                email=session.get("reset_email"),
+            )
+
+        if attempts >= 5:
+            session.clear()
+            return redirect("/forgot_password")
+
         if expected_otp and otp_entered == expected_otp:
             session["logged_in"] = True
-            session["user"] = "test@gmail.com"
+            session["user"] = session.get("reset_email")
+            session["role"] = "admin"
             
             session.pop("reset_otp", None)
             session.pop("reset_email", None)
+            session.pop("reset_otp_expires_at", None)
+            session.pop("reset_otp_attempts", None)
             
             return redirect("/dashboard")
         else:
+            session["reset_otp_attempts"] = attempts + 1
             return render_template("verify_otp.html", error="Invalid OTP. Please try again.", email=session.get("reset_email"))
             
     if "reset_otp" not in session:
@@ -440,6 +489,8 @@ def api_alerts_history():
 def api_delete_alert(alert_id):
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
+    if session.get("role") != "admin":
+        return jsonify({"error": "Admin access required"}), 403
     
     delete_detection(alert_id)
     return jsonify({"status": "success"})
@@ -448,6 +499,8 @@ def api_delete_alert(alert_id):
 def api_clear_all_detections():
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
+    if session.get("role") != "admin":
+        return jsonify({"error": "Admin access required"}), 403
     
     clear_all_detections()
     detector.detections.clear()
@@ -481,7 +534,16 @@ def camera_feed(camera_id):
 
 @app.route("/api/cameras")
 def get_cameras():
-    return jsonify({"cameras": [0]})
+    configured_ids = os.environ.get("CAMERA_IDS", "0,1,2,3")
+    cameras_list = []
+    for value in configured_ids.split(","):
+        try:
+            camera_id = int(value.strip())
+        except ValueError:
+            continue
+        if camera_id >= 0 and camera_id not in cameras_list:
+            cameras_list.append(camera_id)
+    return jsonify({"cameras": cameras_list or [0]})
 
 @app.route("/api/webcam_status/<int:camera_id>")
 def webcam_status(camera_id):
@@ -672,6 +734,11 @@ def api_faces():
 
 @app.route("/api/delete_face", methods=["POST"])
 def delete_face():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    if session.get("role") != "admin":
+        return jsonify({"error": "Admin access required"}), 403
+
     data = request.get_json(silent=True) or {}
     filename = data.get("filename")
     if filename:

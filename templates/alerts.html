@@ -24,6 +24,33 @@
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .time-selector {
+        display: flex;
+        gap: 3px;
+        padding: 3px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--border-color);
+    }
+
+    .time-btn {
+        border: 0;
+        border-radius: 6px;
+        padding: 7px 11px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .time-btn:hover,
+    .time-btn.active {
+        color: #001018;
+        background: var(--accent-cyan);
     }
 
     .search-box {
@@ -152,7 +179,7 @@
     <div class="filter-bar">
         <div class="filter-options">
             <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Filter Severity:</span>
-            <div class="time-selector" style="background: rgba(255,255,255,0.03); padding: 2px; border-radius: 6px; display: flex;">
+            <div class="time-selector">
                 <button class="time-btn active" onclick="setSeverityFilter('All', this)">All</button>
                 <button class="time-btn" onclick="setSeverityFilter('CRITICAL', this)">Critical</button>
                 <button class="time-btn" onclick="setSeverityFilter('HIGH', this)">High</button>
@@ -200,18 +227,24 @@
 
 {% block scripts %}
 <script>
+    const canDeleteAlerts = {{ 'true' if session.get('role') == 'admin' else 'false' }};
     let activeSeverity = 'All';
     let rawAlerts = [];
 
     document.addEventListener("DOMContentLoaded", () => {
         loadAlerts();
+        window.setInterval(loadAlerts, 5000);
     });
 
     async function loadAlerts() {
         try {
             const url = activeSeverity === 'All' ? '/api/alerts_history' : `/api/alerts_history?severity=${activeSeverity}`;
             const response = await fetch(url);
-            rawAlerts = await response.json();
+            if (!response.ok) {
+                throw new Error(`Alerts request failed (${response.status})`);
+            }
+            const payload = await response.json();
+            rawAlerts = Array.isArray(payload) ? payload : [];
             
             document.getElementById("log-count").innerText = rawAlerts.length;
             renderTable(rawAlerts);
@@ -237,8 +270,12 @@
         }
 
         alerts.forEach(alert => {
-            const sevClass = alert.severity.toLowerCase();
-            const confidenceText = alert.confidence ? `${(alert.confidence * 100).toFixed(1)}%` : 'N/A';
+            const severity = alert.severity || 'LOW';
+            const sevClass = severity.toLowerCase();
+            const confidence = Number(alert.confidence);
+            const confidenceText = Number.isFinite(confidence)
+                ? `${(confidence <= 1 ? confidence * 100 : confidence).toFixed(1)}%`
+                : 'N/A';
             const countBadge = alert.count > 1 ? ` <span class="severity-capsule low" style="font-size: 0.7rem; padding: 2px 6px; margin-left: 6px;">x${alert.count}</span>` : '';
             
             tbody.innerHTML += `
@@ -247,11 +284,11 @@
                     <td style="font-weight: 600; display: flex; align-items: center; height: 100%;">${alert.label}${countBadge}</td>
                     <td><i class="fa-solid fa-video-camera" style="margin-right: 6px; font-size: 0.8rem; color: var(--text-secondary);"></i>${alert.camera}</td>
                     <td style="font-family: monospace;">${confidenceText}</td>
-                    <td><span class="severity-capsule ${sevClass}">${alert.severity}</span></td>
+                    <td><span class="severity-capsule ${sevClass}">${severity}</span></td>
                     <td style="text-align: right;">
-                        <button class="resolve-btn" onclick="resolveAlert(${alert.id})" title="Resolve threat & remove log">
-                            <i class="fa-solid fa-circle-check"></i> Clear
-                        </button>
+                        ${canDeleteAlerts
+                            ? `<button class="resolve-btn" onclick="resolveAlert(${alert.id})" title="Resolve threat & remove log"><i class="fa-solid fa-circle-check"></i> Clear</button>`
+                            : '<span style="color:var(--text-secondary);font-size:.75rem;"><i class="fa-solid fa-lock"></i> Admin only</span>'}
                     </td>
                 </tr>
             `;

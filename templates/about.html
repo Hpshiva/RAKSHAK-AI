@@ -295,7 +295,7 @@
                 graph TD
                     A[Security Camera] -->|Video Feed| B(Zero-Latency Engine)
                     B -->|Instant Frame| C{AI Engine Worker}
-                    C -->|Object Detection| D[YOLOv8 Model]
+                    C -->|Object Detection| D[YOLO26s Model]
                     C -->|Action Recognition| E[Violence Model]
                     D --> F[Face Recognition DB]
                     E --> G[Threat Assessment]
@@ -309,21 +309,21 @@
         <h2>4. How it Works: A Real-World Example</h2>
         <p>Let's walk through an example of what happens if a fight breaks out on campus:</p>
         <div class="alert-box">
-            <strong>Example Scenario:</strong> Two known students, Shrishail and John, begin physically assaulting each other in the Main Hallway.
+            <strong>Example Scenario:</strong> Two known students begin physically assaulting each other in the Main Hallway.
             <ol style="margin-top: 10px; margin-left: 20px;">
                 <li><strong>Capture:</strong> The Main Hallway camera captures the video. The <i>Zero-Latency Engine</i> instantly grabs the newest frame, ensuring there is zero lag.</li>
                 <li><strong>Analysis & Identification:</strong> 
                     <ul>
                         <li>The YOLO model recognizes that there are two "Persons" in the frame.</li>
                         <li>The Violence Model analyzes their posture and identifies the action as "Physical Assault".</li>
-                        <li>The Face Recognition Engine scans their faces, extracts their facial structure, and matches them to the "Known Faces" database as Shrishail and John.</li>
+                        <li>The Face Recognition Engine scans their faces, extracts their facial structure, and matches them to records in the "Known Faces" database.</li>
                     </ul>
                 </li>
                 <li><strong>Response:</strong> 
                     <ul>
                         <li>The system draws green bounding boxes displaying their names directly on the live video feed.</li>
                         <li>It logs exactly who committed the violence in the Database.</li>
-                        <li>It triggers the school's PA system to announce intelligently: "Violence detected. Shrishail, John involved in Physical Assault".</li>
+                        <li>It triggers the school's PA system to announce intelligently: "Violence detected. Identified students involved in physical assault".</li>
                     </ul>
                 </li>
             </ol>
