@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-        const savedTheme = localStorage.getItem('theme_palette') || localStorage.getItem('theme') || 'violet';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
     </script>
     <style>
         :root {
@@ -25,31 +26,7 @@
             --sidebar-width: 250px;
         }
 
-        [data-theme="emerald"] {
-            --bg-color: #04120e;
-            --panel-bg: #0b1a15;
-            --sidebar-bg: #071713;
-            --text-primary: #f0fdf4;
-            --text-secondary: #86efac;
-            --accent-cyan: #00ffaa;
-            --accent-green: #10b981;
-            --accent-red: #f43f5e;
-            --border-color: rgba(0, 255, 170, 0.12);
-            --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
 
-        [data-theme="violet"] {
-            --bg-color: #0c0a1d;
-            --panel-bg: #15122b;
-            --sidebar-bg: #110e24;
-            --text-primary: #faf5ff;
-            --text-secondary: #c084fc;
-            --accent-cyan: #a855f7;
-            --accent-green: #34d399;
-            --accent-red: #f43f5e;
-            --border-color: rgba(168, 85, 247, 0.15);
-            --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
 
         [data-theme="light"] {
             --bg-color: #f1f5f9;
@@ -379,7 +356,6 @@
                 <p>{% block header_subtitle %}Real-Time AI Surveillance Dashboard{% endblock %}</p>
             </div>
             <div class="header-actions">
-                <button class="icon-btn" id="palette-toggle" title="Change Color Theme"><i class="fa-solid fa-palette"></i></button>
                 <button class="icon-btn" id="theme-toggle" title="Toggle Light/Dark"><i class="fa-solid fa-moon"></i></button>
                 <button class="icon-btn" id="bell-toggle">
                     <i class="fa-solid fa-bell"></i>
@@ -388,31 +364,6 @@
                 <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
                 <a href="/logout" class="icon-btn"><i class="fa-solid fa-user"></i></a>
                 <div class="time-badge" id="clock">--:--:-- --</div>
-            </div>
-
-            <!-- Theme Palette Dropdown -->
-            <div class="notification-dropdown" id="theme-palette-dropdown" style="right: 170px; width: 240px;">
-                <div class="notification-header">
-                    <span><i class="fa-solid fa-palette"></i> Color Themes</span>
-                </div>
-                <div class="notification-body" style="padding: 8px;">
-                    <div class="theme-menu-item" onclick="applyThemePalette('cyber')" style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-                        <span style="width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #0b1120, #38bdf8); display: inline-block; border: 1px solid rgba(255,255,255,0.2);"></span>
-                        Cyber Command
-                    </div>
-                    <div class="theme-menu-item" onclick="applyThemePalette('emerald')" style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-                        <span style="width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #04120e, #00ffaa); display: inline-block; border: 1px solid rgba(255,255,255,0.2);"></span>
-                        Emerald Matrix
-                    </div>
-                    <div class="theme-menu-item" onclick="applyThemePalette('violet')" style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-                        <span style="width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #0c0a1d, #a855f7); display: inline-block; border: 1px solid rgba(255,255,255,0.2);"></span>
-                        Indigo AI
-                    </div>
-                    <div class="theme-menu-item" onclick="applyThemePalette('light')" style="padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-                        <span style="width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #f1f5f9, #0284c7); display: inline-block; border: 1px solid rgba(0,0,0,0.1);"></span>
-                        Enterprise Light
-                    </div>
-                </div>
             </div>
             
             <!-- Notification Dropdown -->
@@ -448,41 +399,12 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Palette Dropdown Toggle & Theme Switcher
-        const paletteToggle = document.getElementById('palette-toggle');
-        const paletteDropdown = document.getElementById('theme-palette-dropdown');
-
-        if (paletteToggle && paletteDropdown) {
-            paletteToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                paletteDropdown.classList.toggle('show');
-            });
-            document.addEventListener('click', (e) => {
-                if (!paletteDropdown.contains(e.target) && !paletteToggle.contains(e.target)) {
-                    paletteDropdown.classList.remove('show');
-                }
-            });
-        }
-
-        function applyThemePalette(paletteName) {
-            if (paletteName === 'cyber' || !paletteName) {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('theme_palette', 'cyber');
-            } else {
-                document.documentElement.setAttribute('data-theme', paletteName);
-                localStorage.setItem('theme_palette', paletteName);
-            }
-            if (paletteDropdown) paletteDropdown.classList.remove('show');
-            updateThemeIcon();
-        }
-
         // Theme Toggler
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = themeToggle.querySelector('i');
         
         function updateThemeIcon() {
-            const cur = document.documentElement.getAttribute('data-theme');
-            if (cur === 'light') {
+            if (document.documentElement.getAttribute('data-theme') === 'light') {
                 themeIcon.className = 'fa-solid fa-sun';
             } else {
                 themeIcon.className = 'fa-solid fa-moon';
@@ -495,10 +417,13 @@
             e.preventDefault();
             const isLight = document.documentElement.getAttribute('data-theme') === 'light';
             if (isLight) {
-                applyThemePalette('cyber');
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
             } else {
-                applyThemePalette('light');
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
             }
+            updateThemeIcon();
         });
 
         // Notifications Popover
