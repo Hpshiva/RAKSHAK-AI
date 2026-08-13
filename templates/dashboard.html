@@ -25,12 +25,45 @@
         background: var(--panel-bg);
         border: 1px solid var(--border-color);
         border-radius: 16px;
-        padding: 15px 20px;
+        box-shadow: var(--card-shadow);
+        padding: 18px 22px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         min-height: 150px;
         height: auto;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.15);
+        border-color: rgba(0, 210, 255, 0.3);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #007aff, #00d2ff);
+        opacity: 0.8;
+    }
+
+    .stat-card:nth-child(2)::before {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .stat-card:nth-child(3)::before {
+        background: linear-gradient(90deg, #6366f1, #818cf8);
+    }
+
+    .stat-card:nth-child(4)::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
     }
 
     .stat-card-header {
@@ -43,14 +76,17 @@
         width: 40px;
         height: 40px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #007aff, #00d2ff);
         color: #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.2rem;
-        box-shadow: 0 4px 10px rgba(0, 210, 255, 0.2);
     }
+
+    .stat-card:nth-child(1) .stat-icon { background: linear-gradient(135deg, #007aff, #00d2ff); box-shadow: 0 4px 12px rgba(0, 210, 255, 0.3); }
+    .stat-card:nth-child(2) .stat-icon { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+    .stat-card:nth-child(3) .stat-icon { background: linear-gradient(135deg, #4f46e5, #6366f1); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+    .stat-card:nth-child(4) .stat-icon { background: linear-gradient(135deg, #d97706, #f59e0b); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
 
     .stat-badge {
         font-size: 0.7rem;
@@ -128,20 +164,65 @@
         color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.2s ease;
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: 1.25rem;
+        padding: 0;
         margin-left: 6px;
+        line-height: 1;
+    }
+    .panel-btn i {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
+        font-size: 1.2rem;
     }
     .panel-btn:hover {
         background: rgba(0, 210, 255, 0.15);
         color: var(--accent-cyan);
         border-color: var(--accent-cyan);
         transform: scale(1.1);
+    }
+
+    .btn-camera-toggle {
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent-cyan);
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .btn-camera-toggle:hover {
+        background: var(--accent-cyan);
+        color: #000;
+        border-color: var(--accent-cyan);
+        box-shadow: 0 4px 12px rgba(0, 210, 255, 0.3);
+        transform: translateY(-1px);
+    }
+    .btn-camera-toggle.active {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-red);
+        border-color: rgba(239, 68, 68, 0.4);
+    }
+    .btn-camera-toggle.active:hover {
+        background: var(--accent-red);
+        color: #ffffff;
+        border-color: var(--accent-red);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 
     .video-wrapper {
@@ -335,17 +416,21 @@
         <!-- Live Surveillance Panel -->
         <div class="panel" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
             <div class="panel-header">
-                <div>
-                    <div><i class="fa-solid fa-camera"></i> Live Surveillance</div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px; font-weight: normal;">Camera • Main Gate</div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-camera"></i> Live Surveillance
+                            <span class="panel-pill" id="dashboard-live-badge" style="background: var(--text-secondary); color: white; opacity: 0.5; font-size: 0.65rem; padding: 2px 8px;"><i class="fa-solid fa-circle-notch"></i> OFFLINE</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px; font-weight: normal;">Camera • Main Gate</div>
+                    </div>
                 </div>
                 <div class="panel-actions">
                     <span class="panel-pill">1080P</span>
                     <span class="panel-pill">30 FPS</span>
-                    <span class="panel-pill" id="dashboard-live-badge" style="background: var(--text-secondary); color: white; opacity: 0.5;"><i class="fa-solid fa-circle-notch"></i> OFFLINE</span>
                     <button class="panel-btn" onclick="toggleFullscreen(this)" title="Fullscreen"><i class="fa-solid fa-expand" style="color: var(--accent-cyan);"></i></button>
                     <button class="panel-btn" onclick="takeSnapshot()" title="Capture Snapshot"><i class="fa-solid fa-camera" style="color: var(--accent-cyan);"></i></button>
-                    <button class="panel-btn" id="dashboard-webcam-toggle" onclick="toggleDashboardWebcam(0)" title="Toggle Camera"><i class="fa-solid fa-toggle-off" style="color: var(--text-secondary);"></i></button>
+                    <button class="btn-camera-toggle" id="dashboard-webcam-toggle" onclick="toggleDashboardWebcam(0)"><i class="fa-solid fa-power-off"></i> Turn On</button>
                 </div>
             </div>
             <div class="panel-content" style="padding: 15px; display: flex; align-items: center; justify-content: center; background: #000;">
@@ -516,11 +601,26 @@
 
     // Fullscreen Toggle
     function toggleFullscreen(btn) {
-        const container = btn.closest('.video-wrapper');
-        if (!document.fullscreenElement) {
-            if (container.requestFullscreen) container.requestFullscreen();
+        const panel = btn.closest('.panel');
+        const img = panel ? panel.querySelector('img') : null;
+        const container = img || panel || document.documentElement;
+        
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            } else if (container.msRequestFullscreen) {
+                container.msRequestFullscreen();
+            }
         } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
         }
     }
 
@@ -653,19 +753,21 @@
         const toggleBtn = document.getElementById('dashboard-webcam-toggle');
         
         if (enabled) {
-            badge.style.background = "var(--accent-red)";
+            badge.style.background = "#10b981";
             badge.style.color = "white";
             badge.style.opacity = "1";
-            badge.innerHTML = '<i class="fa-solid fa-circle"></i> LIVE';
+            badge.innerHTML = '<i class="fa-solid fa-circle" style="font-size: 0.55rem; color: white;"></i> LIVE';
             
-            toggleBtn.innerHTML = '<i class="fa-solid fa-toggle-on" style="color: var(--accent-cyan);"></i>';
+            toggleBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Turn Off';
+            toggleBtn.classList.add('active');
         } else {
             badge.style.background = "var(--text-secondary)";
             badge.style.color = "white";
             badge.style.opacity = "0.5";
             badge.innerHTML = '<i class="fa-solid fa-circle-notch"></i> OFFLINE';
             
-            toggleBtn.innerHTML = '<i class="fa-solid fa-toggle-off" style="color: var(--text-secondary);"></i>';
+            toggleBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Turn On';
+            toggleBtn.classList.remove('active');
         }
     }
 

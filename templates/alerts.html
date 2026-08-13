@@ -142,6 +142,22 @@
         color: var(--accent-red);
         border-color: var(--accent-red);
     }
+    
+    .time-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .time-btn.active {
+        background: linear-gradient(135deg, #007aff, #00d2ff);
+        color: #000;
+    }
 </style>
 {% endblock %}
 
@@ -165,7 +181,10 @@
             </div>
         </div>
         
-        <button class="export-btn" onclick="exportAlertsToCSV()"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="export-btn" onclick="exportAlertsToCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+            <button class="export-btn" style="background: rgba(0, 255, 170, 0.1); color: var(--accent-green); border-color: rgba(0, 255, 170, 0.2);" onclick="window.open('/api/export_report', '_blank')"><i class="fa-solid fa-file-pdf"></i> Audit Report</button>
+        </div>
     </div>
 
     <!-- Alerts Database Table -->
@@ -238,7 +257,7 @@
 
         alerts.forEach(alert => {
             const sevClass = alert.severity.toLowerCase();
-            const confidenceText = alert.confidence ? `${(alert.confidence * 100).toFixed(1)}%` : 'N/A';
+            const confidenceText = alert.confidence ? `${alert.confidence.toFixed(1)}%` : 'N/A';
             const countBadge = alert.count > 1 ? ` <span class="severity-capsule low" style="font-size: 0.7rem; padding: 2px 6px; margin-left: 6px;">x${alert.count}</span>` : '';
             
             tbody.innerHTML += `
@@ -317,7 +336,7 @@
         csvContent += "ID,Timestamp,Classification,Camera,Confidence,Severity\n";
 
         rawAlerts.forEach(alert => {
-            const confidence = alert.confidence ? (alert.confidence * 100).toFixed(1) + "%" : 'N/A';
+            const confidence = alert.confidence ? alert.confidence.toFixed(1) + "%" : 'N/A';
             const row = [
                 alert.id,
                 `"${alert.detected_at}"`,

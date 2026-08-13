@@ -65,6 +65,7 @@ class CameraState:
     def __init__(self, name):
         self.name = name
         self.person_count = 0
+        self.seen_person_ids = set()
         self.frame_count = 0
         self.frame_count_ai = 0
         self.last_violence_label = "Unknown"
@@ -267,12 +268,11 @@ def ai_worker():
                                     print("Audio alert error:", e)
                             threading.Thread(target=_speak_alert, daemon=True).start()
 
-                # 2. YOLO Object Detection
-                results = model.predict(source=frame, conf=0.85, imgsz=640, verbose=False)
+                # 2. YOLO Object Tracking
+                results = model.track(source=frame, conf=0.85, imgsz=640, verbose=False, persist=True)
                 result = results[0]
 
                 new_boxes = []
-                current_person_count = 0
                 
                 # Run face recognition if there's any person
                 has_person = any(model.names[int(box.cls[0])] == "person" for box in result.boxes)
@@ -285,9 +285,12 @@ def ai_worker():
                     class_name = model.names[cls]
                     confidence = round(float(box.conf[0]) * 100, 1)
                     coords = tuple(map(int, box.xyxy[0]))
+                    
+                    track_id = int(box.id[0]) if box.id is not None else None
 
                     if class_name == "person":
-                        current_person_count += 1
+                        if track_id is not None:
+                            state.seen_person_ids.add(track_id)
                         
                         # Match face bounding box to person bounding box
                         matched_name = None
@@ -316,12 +319,12 @@ def ai_worker():
                         new_boxes.append((coords, confidence, color, class_name))
                         
                         add_detection(class_name, confidence, threat, state.name)
-                        if class_name != "person" and should_save_detection(class_name, state.name):
+                        if class_name != "person":
                             save_detection(label=class_name, confidence=confidence, severity=threat, camera=state.name)
                     else:
                         new_boxes.append((coords, confidence, GREEN, class_name))
                 
-                state.person_count = current_person_count
+                state.person_count = len(state.seen_person_ids)
                 state.cached_boxes = new_boxes
             except Exception as e:
                 print(f"AI Worker Error on cam {cid}:", e)
@@ -407,4 +410,5 @@ def clear_detections():
     dispatch_camera = None
     for s in camera_states.values():
         s.person_count = 0
+        s.seen_person_ids.clear()
         s.current_threat = "LOW"

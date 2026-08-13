@@ -8,7 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
 from ai.detector import detect
 import ai.detector as detector
-from database import get_detection_count, get_recent_face_detections, initialize_database, get_all_detections, delete_detection, get_analytics_summary, clear_all_detections
+from database import get_detection_count, get_recent_face_detections, initialize_database, get_all_detections, delete_detection, get_analytics_summary, clear_all_detections, reset_system
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -452,6 +452,35 @@ def api_clear_all_detections():
     clear_all_detections()
     detector.detections.clear()
     return jsonify({"status": "success"})
+
+@app.route("/api/reset_system", methods=["POST"])
+def api_reset_system():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    reset_system()
+    try:
+        import shutil
+        import os
+        if os.path.exists('static/snapshots'):
+            shutil.rmtree('static/snapshots')
+            os.makedirs('static/snapshots')
+    except Exception as e:
+        print(e)
+    
+    detector.clear_detections()
+    return jsonify({"status": "success"})
+
+@app.route("/api/export_report", methods=["GET"])
+def api_export_report():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    from utils.pdf_generator import generate_html_summary_report
+    html_report = generate_html_summary_report()
+    return Response(html_report, mimetype="text/html", headers={"Content-Disposition": "attachment;filename=Rakshak_Security_Report.html"})
+
+
 
 @app.route("/api/analytics_metrics", methods=["GET"])
 def api_analytics_metrics():

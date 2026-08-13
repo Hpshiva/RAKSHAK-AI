@@ -218,6 +218,21 @@
         </div>
     </div>
 
+    <!-- System Actions -->
+    <div class="panel" style="border-color: rgba(239, 68, 68, 0.3);">
+        <div class="panel-header">
+            <div><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-red);"></i> Danger Zone</div>
+        </div>
+        <div class="panel-content">
+            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9rem;">
+                This action will erase all database logs (detections, snapshots, reports) and reset the AI tracking counters. <strong>Known Faces will NOT be deleted.</strong>
+            </p>
+            <button onclick="resetSystem()" class="btn-primary" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3);">
+                <i class="fa-solid fa-power-off"></i> Reset System
+            </button>
+        </div>
+    </div>
+
 </div>
 
 <!-- Edit Face Modal -->
@@ -416,6 +431,21 @@
         setTimeout(() => {
             toast.style.display = 'none';
         }, 3000);
+    }
+
+    async function resetSystem() {
+        if(!confirm("Are you ABSOLUTELY sure you want to reset the system? This will clear all detections and AI memory!")) return;
+        
+        try {
+            const response = await fetch('/api/reset_system', { method: 'POST' });
+            if (response.ok) {
+                showToast('System has been reset successfully!');
+            } else {
+                alert("Failed to reset the system.");
+            }
+        } catch (err) {
+            alert("Network error occurred.");
+        }
     }
 
     loadFaces();

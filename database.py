@@ -9,8 +9,10 @@ DB_PATH = BASE_DIR / "database" / "rakshak.db"
 db_lock = threading.Lock()
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     return conn
 
 def initialize_database():
@@ -77,7 +79,7 @@ def should_save_detection(label, camera, cooldown=60):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT datetime(detected_at, 'localtime') as detected_at
+        SELECT detected_at
         FROM detections
         WHERE label = ? AND camera = ?
         ORDER BY id DESC
@@ -90,26 +92,38 @@ def should_save_detection(label, camera, cooldown=60):
     if not row:
         return True
 
-    # SQLite returns YYYY-MM-DD HH:MM:SS, format for fromisoformat needs T divider
     dt_str = row["detected_at"].replace(" ", "T")
     last_detection = datetime.fromisoformat(dt_str)
 
-    return datetime.now() - last_detection > timedelta(seconds=cooldown)
+    from datetime import timezone
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    return now_utc - last_detection > timedelta(seconds=cooldown)
 
-def save_detection(label, confidence, severity, camera):
+def save_detection(label, confidence, severity, camera, cooldown=60):
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
         
+        # Find the last detection for this specific label and camera
         cursor.execute("""
-            SELECT id, label, camera, count 
+            SELECT id, count, detected_at 
             FROM detections 
+            WHERE label = ? AND camera = ? 
             ORDER BY id DESC 
             LIMIT 1
-        """)
+        """, (label, camera))
         row = cursor.fetchone()
         
-        if row and row["label"] == label and row["camera"] == camera:
+        is_active = False
+        if row:
+            dt_str = row["detected_at"].replace(" ", "T")
+            last_detection = datetime.fromisoformat(dt_str)
+            from datetime import timezone
+            now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+            if now_utc - last_detection <= timedelta(seconds=cooldown):
+                is_active = True
+                
+        if is_active:
             cursor.execute("""
                 UPDATE detections 
                 SET confidence = ?, severity = ?, count = count + 1, detected_at = CURRENT_TIMESTAMP
@@ -125,6 +139,14 @@ def save_detection(label, confidence, severity, camera):
             
         conn.commit()
         conn.close()
+
+    if severity in ["HIGH", "CRITICAL"] and not is_active:
+        try:
+            from ai.notifier import send_alert_notification
+            send_alert_notification(label, confidence, severity, camera)
+        except Exception as e:
+            print(f"[Notification Dispatch Error] {e}")
+
     return detection_id
 
 def get_recent_face_detections(limit=5):
@@ -271,5 +293,16 @@ def clear_all_detections():
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM detections")
+        conn.commit()
+        conn.close()
+
+def reset_system():
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM detections")
+        cursor.execute("DELETE FROM snapshots")
+        cursor.execute("DELETE FROM recordings")
+        cursor.execute("DELETE FROM reports")
         conn.commit()
         conn.close()

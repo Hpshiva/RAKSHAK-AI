@@ -99,26 +99,39 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+    }
     .btn-camera-toggle {
-        background: linear-gradient(var(--panel-bg), var(--panel-bg)) padding-box,
-                    linear-gradient(135deg, #007aff, #00d2ff) border-box;
-        border: 1px solid transparent;
-        border-radius: 20px;
+        background: rgba(0, 210, 255, 0.1);
         color: var(--accent-cyan);
-        cursor: pointer;
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        border-radius: 20px;
         padding: 6px 14px;
         font-weight: 600;
         font-size: 0.8rem;
+        cursor: pointer;
         transition: all 0.2s ease;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: 6px;
     }
     .btn-camera-toggle:hover {
-        background: linear-gradient(rgba(0, 210, 255, 0.15), rgba(0, 210, 255, 0.15)) padding-box,
-                    linear-gradient(135deg, #00d2ff, #007aff) border-box;
+        background: var(--accent-cyan);
+        color: #000;
+        border-color: var(--accent-cyan);
+        box-shadow: 0 4px 12px rgba(0, 210, 255, 0.3);
+        transform: translateY(-1px);
+    }
+    .btn-camera-toggle.active {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-red);
+        border-color: rgba(239, 68, 68, 0.4);
+    }
+    .btn-camera-toggle.active:hover {
+        background: var(--accent-red);
         color: #ffffff;
-        transform: scale(1.05);
+        border-color: var(--accent-red);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 </style>
 {% endblock %}
@@ -229,7 +242,7 @@
                             Camera ${camId}
                             <span class="pill badge-orange offline-pill" style="margin-left: 5px;">Offline</span>
                         </div>
-                        <button onclick="toggleWebcam(this, ${camId})" class="btn-camera-toggle">Turn On</button>
+                        <button onclick="toggleWebcam(this, ${camId})" class="btn-camera-toggle"><i class="fa-solid fa-power-off"></i> Turn On</button>
                     </div>
                     <div style="position: relative; background: #000;">
                         <img src="/camera_feed/${camId}" style="width: 100%; display: block;" alt="Camera ${camId}">
@@ -321,11 +334,13 @@
         const dot = document.getElementById('webcam-dot-' + camId);
         
         if (data.webcam_enabled) {
-            btn.textContent = "Turn Off";
+            btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Turn Off';
+            btn.classList.add('active');
             dot.style.display = 'block';
             if(pill) { pill.className = 'pill badge-red offline-pill'; pill.textContent = 'Live'; }
         } else {
-            btn.textContent = "Turn On";
+            btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Turn On';
+            btn.classList.remove('active');
             dot.style.display = 'none';
             if(pill) { pill.className = 'pill badge-orange offline-pill'; pill.textContent = 'Offline'; }
         }
@@ -392,11 +407,26 @@
     }
 
     function toggleFullscreen(btn) {
-        const container = btn.closest('div').parentElement; // The div with position:relative
-        if (!document.fullscreenElement) {
-            if (container.requestFullscreen) container.requestFullscreen();
+        const parent = btn.closest('.panel') || btn.closest('div[style*="position: relative"]') || btn.closest('div');
+        const img = parent ? parent.querySelector('img') : null;
+        const container = img || parent || document.documentElement;
+        
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            } else if (container.msRequestFullscreen) {
+                container.msRequestFullscreen();
+            }
         } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
         }
     }
 </script>
