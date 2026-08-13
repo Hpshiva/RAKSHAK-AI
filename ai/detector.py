@@ -202,6 +202,7 @@ def ai_worker():
         for cid, frame in frames_to_process:
             state = get_camera_state(cid)
             state.frame_count_ai += 1
+            current_time = time.time()
             
             try:
                 # 1. Violence / Threat Detection (every 5 frames to save CPU)
@@ -226,7 +227,7 @@ def ai_worker():
                         if state.screenshot_count_this_event < 2 and (current_time - state.last_screenshot_trigger_time > 2):
                             state.last_screenshot_trigger_time = current_time
                             try:
-                                snapshot_dir = os.path.dirname(BASE_DIR) # Points to 'rakshak ai'
+                                snapshot_dir = os.path.join(BASE_DIR, "snapshots")
                                 os.makedirs(snapshot_dir, exist_ok=True)
                                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                                 clean_cam_name = state.name.replace(" ", "_").replace("(", "").replace(")", "")

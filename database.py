@@ -3,7 +3,8 @@ import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 
-DB_PATH = Path("database") / "rakshak.db"
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "database" / "rakshak.db"
 
 db_lock = threading.Lock()
 
