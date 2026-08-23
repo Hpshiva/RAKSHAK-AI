@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        :root { --text:var(--color-ink); --muted:var(--color-muted); --border:var(--color-hairline); }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { min-height:100vh; font-family:var(--font-sans); color:var(--text); background-color:var(--color-canvas); background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px),radial-gradient(circle at 10% 15%,rgba(204,120,92,.06),transparent 45%),radial-gradient(circle at 90% 85%,rgba(93,184,166,.06),transparent 45%); background-size:var(--grid-size) var(--grid-size),var(--grid-size) var(--grid-size),auto,auto; background-attachment:fixed; }
+        .topbar-wrapper { padding:20px 40px; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 24px; border:1px solid var(--border); border-radius:var(--radius-xl); background:#ffffff; box-shadow:var(--shadow-soft); }
+        .top-left,.logo-area,.nav-links,.top-right { display:flex; align-items:center; }
+        .logo-area { gap:12px; color:inherit; text-decoration:none; font-size:1.15rem; font-weight:700; white-space:nowrap; }
+        .logo-icon { width:36px; height:36px; display:grid; place-items:center; color:var(--color-on-dark); border-radius:var(--radius-md); background:linear-gradient(135deg,var(--color-surface-dark),var(--color-surface-dark-elevated)); box-shadow:var(--shadow-soft); }
+        .nav-links { gap:10px; margin-left:40px; padding:5px; border-radius:var(--radius-lg); background:var(--color-surface-soft); }
+        .nav-links a { padding:8px 16px; color:var(--muted); text-decoration:none; font-size:.9rem; font-weight:600; border-radius:var(--radius-md); white-space:nowrap; }
+        .nav-links a.active { color:var(--text); background:var(--color-surface-card); }
+        .top-right { gap:14px; }
+        .icon-btn { width:42px; height:42px; display:grid; place-items:center; color:var(--text); text-decoration:none; border-radius:50%; background:var(--color-canvas); border:1px solid var(--border); }
+        .container { padding:10px 40px 40px; }
+        .heading { margin-bottom:22px; }
+        .heading h1 { font-family:var(--font-display); font-weight:400; font-size:2.1rem; letter-spacing:-0.3px; margin-bottom:7px; }
+        .heading p { color:var(--muted); }
+        .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:20px; }
+        .stat,.panel { border:1px solid var(--border); background:#ffffff; box-shadow:var(--shadow-card); }
+        .stat { padding:20px; border-radius:var(--radius-lg); }
+        .stat .label { color:var(--muted); font-size:.82rem; margin-bottom:8px; }
+        .stat .value { font-size:1.65rem; font-weight:700; }
+        .panel { padding:22px; border-radius:var(--radius-xl); }
+        .toolbar { display:grid; grid-template-columns:minmax(220px,1fr) 170px 170px auto auto; gap:12px; margin-bottom:18px; }
+        input,select,button { font:inherit; border:1px solid var(--border); border-radius:var(--radius-md); padding:11px 13px; background:var(--color-canvas); }
+        button { cursor:pointer; color:var(--color-on-primary); background:var(--color-primary); font-weight:600; transition:background .2s ease; }
+        button:hover { background:var(--color-primary-active); }
+        .report-link { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:11px 14px; color:var(--color-on-primary); background:var(--color-primary); border-radius:var(--radius-md); text-decoration:none; font-size:.88rem; font-weight:700; white-space:nowrap; transition:background .2s ease; }
+        .report-link:hover { background:var(--color-primary-active); }
+        .row-report { padding:7px 10px; border-radius:var(--radius-sm); font-size:.78rem; }
+        .delete-btn { padding:7px 10px; border:0; border-radius:var(--radius-sm); color:var(--color-error); background:rgba(198,69,69,.12); font-size:.78rem; }
+        .delete-btn:hover { background:rgba(198,69,69,.2); }
+        .modal-backdrop { position:fixed; inset:0; z-index:10000; display:none; place-items:center; padding:20px; background:rgba(20,20,19,.5); backdrop-filter:blur(6px); }
+        .modal-backdrop.show { display:grid; }
+        .delete-modal { width:min(420px,100%); padding:26px; border:1px solid var(--border); border-radius:var(--radius-xl); background:#fff; box-shadow:0 24px 70px rgba(20,20,19,.22); }
+        .delete-modal-icon { width:46px; height:46px; display:grid; place-items:center; margin-bottom:16px; border-radius:var(--radius-lg); color:var(--color-error); background:rgba(198,69,69,.12); font-size:1.2rem; }
+        .delete-modal h2 { font-family:var(--font-display); font-weight:400; margin-bottom:8px; font-size:1.4rem; }
+        .delete-modal p { margin-bottom:18px; color:var(--muted); font-size:.9rem; line-height:1.5; }
+        .delete-modal label { display:block; margin-bottom:7px; font-size:.84rem; font-weight:700; }
+        .delete-modal input { width:100%; background:var(--color-canvas); }
+        .modal-error { min-height:20px; margin-top:7px; color:var(--color-error); font-size:.8rem; }
+        .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+        .cancel-delete { color:var(--text); background:var(--color-surface-soft); }
+        .confirm-delete { background:var(--color-error); }
+        .confirm-delete:hover { background:#a83737; }
+        .confirm-delete:disabled { cursor:wait; opacity:.65; }
+        .table-wrap { overflow:auto; max-height:calc(100vh - 390px); border-radius:var(--radius-lg); }
+        table { width:100%; border-collapse:collapse; background:#ffffff; }
+        th,td { padding:13px 14px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+        th { position:sticky; top:0; z-index:1; color:var(--muted); background:var(--color-surface-soft); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+        td { font-size:.9rem; }
+        .badge { display:inline-block; padding:4px 9px; border-radius:var(--radius-pill); font-size:.72rem; font-weight:700; }
+        .low { color:var(--color-success); background:rgba(93,184,114,.14); } .high { color:var(--color-warning); background:rgba(212,160,23,.16); } .critical { color:var(--color-error); background:rgba(198,69,69,.12); } .medium { color:#92610e; background:rgba(232,165,90,.2); }
+        .empty { padding:36px; text-align:center; color:var(--muted); }
+        .table-footer { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-top:16px; color:var(--muted); font-size:.88rem; }
+        .pagination { display:flex; align-items:center; gap:10px; }
+        .pagination button { padding:8px 13px; }
+        .pagination button:disabled { cursor:not-allowed; opacity:.45; }
+        @media(max-width:1100px){ .topbar{border-radius:var(--radius-lg)}.nav-links{overflow:auto;margin-left:18px}.stats{grid-template-columns:repeat(2,1fr)}.toolbar{grid-template-columns:1fr 1fr}.top-right{display:none} }
+        @media(max-width:650px){ .topbar-wrapper,.container{padding-left:16px;padding-right:16px}.top-left{min-width:0}.logo-area{font-size:0}.nav-links{margin-left:10px}.stats,.toolbar{grid-template-columns:1fr} }
+    </style>
+</head>
+<body>
+    <script>
+        const internalNavigation = sessionStorage.getItem('rakshakInternalNavigation') === '1';
+        sessionStorage.removeItem('rakshakInternalNavigation');
+        if (performance.getEntriesByType('navigation')[0]?.type === 'reload' && !internalNavigation) location.replace('/logout');
+        else {
+            document.addEventListener('click', event => {
+                const link = event.target.closest('a[href]');
+                if (link && new URL(link.href, location.href).origin === location.origin) sessionStorage.setItem('rakshakInternalNavigation', '1');
+            });
+            setTimeout(() => location.replace('/logout'), 300000);
+        }
+    </script>
+    <header class="topbar-wrapper">
+        <div class="topbar">
+            <div class="top-left">
+                <a href="/dashboard" class="logo-area"><span class="logo-icon"><i class="fa-solid fa-user-shield"></i></span>RAKSHAK AI</a>
+                <nav class="nav-links">
+                    <a href="/dashboard">Dashboard</a><a href="/video_analysis">Video Analysis</a><a href="/analytics" class="active">Analytics</a><a href="/faces">Known Faces</a><a href="/about"><i class="fa-regular fa-file-lines"></i> About SOP</a>
+                </nav>
+            </div>
+            <div class="top-right"><a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a><a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></div>
+        </div>
+    </header>
+    <main class="container">
+        <div class="heading"><h1><i class="fa-solid fa-chart-line" style="color:var(--color-primary)"></i> Analytics</h1><p>Complete detection history and system activity logs.</p></div>
+        <section class="stats">
+            <div class="stat"><div class="label">Critical Event Logs</div><div class="value" id="totalLogs">0</div></div>
+            <div class="stat"><div class="label">People in Critical Events</div><div class="value" id="peopleLogs">0</div></div>
+            <div class="stat"><div class="label">Critical Alerts</div><div class="value" id="criticalLogs">0</div></div>
+            <div class="stat"><div class="label">Cameras Seen</div><div class="value" id="cameraCount">0</div></div>
+        </section>
+        <section class="panel">
+            <div class="toolbar">
+                <input id="search" type="search" placeholder="Search label or camera...">
+                <select id="severity" disabled><option value="CRITICAL">Critical only</option></select>
+                <input id="date" type="date" title="Filter by date">
+                <button id="refresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                <a class="report-link" href="/generate_report"><i class="fa-regular fa-file-lines"></i> Generate Report</a>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>ID</th><th>Detection</th><th>Confidence</th><th>Severity</th><th>Camera</th><th>Date & Time</th><th>Report</th><th>Delete</th></tr></thead><tbody id="logsBody"></tbody></table><div class="empty" id="empty">Loading logs...</div></div>
+            <div class="table-footer"><span id="resultCount"></span><div class="pagination"><button id="previous">Previous</button><span id="pageLabel">Page 1</span><button id="next">Next</button></div></div>
+        </section>
+    </main>
+    <div class="modal-backdrop" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <form class="delete-modal" id="deleteForm">
+            <div class="delete-modal-icon"><i class="fa-solid fa-trash-can"></i></div>
+            <h2 id="deleteModalTitle">Delete analytics log?</h2>
+            <p>Enter your current account password to permanently delete log <strong id="deleteLogId"></strong>.</p>
+            <label for="deletePassword">Password</label>
+            <input id="deletePassword" type="password" autocomplete="current-password" required placeholder="Enter your password">
+            <div class="modal-error" id="deleteError" role="alert"></div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-delete" id="cancelDelete">Cancel</button>
+                <button type="submit" class="confirm-delete" id="confirmDelete"><i class="fa-solid fa-trash-can"></i> Delete</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        let page = 1;
+        let total = 0;
+        const pageSize = 50;
+        let refreshTimer;
+        let pendingDeleteId = null;
+        const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+        async function loadLogs() {
+            const params = new URLSearchParams({page, page_size:pageSize, search:document.getElementById('search').value.trim(), severity:document.getElementById('severity').value, date:document.getElementById('date').value});
+            const response = await fetch(`/api/analytics/logs?${params}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Unable to load logs');
+            total = data.total;
+            const summary = data.summary || {};
+            document.getElementById('totalLogs').textContent = summary.total || 0;
+            document.getElementById('peopleLogs').textContent = summary.people || 0;
+            document.getElementById('criticalLogs').textContent = summary.critical || 0;
+            document.getElementById('cameraCount').textContent = summary.cameras || 0;
+            document.getElementById('logsBody').innerHTML = data.logs.map(log => `<tr><td>#${log.id}</td><td><strong>${escapeHtml(log.label)}</strong></td><td>${Number(log.confidence || 0).toFixed(1)}%</td><td><span class="badge ${escapeHtml((log.severity || 'LOW').toLowerCase())}">${escapeHtml(log.severity || 'LOW')}</span></td><td>${escapeHtml(log.camera || 'Unknown')}</td><td>${escapeHtml(log.detected_at)}</td><td><a class="report-link row-report" href="/generate_report?detection_id=${encodeURIComponent(log.id)}"><i class="fa-regular fa-file-lines"></i> PDF</a></td><td><button class="delete-btn" type="button" data-delete-id="${Number(log.id)}"><i class="fa-solid fa-trash-can"></i> Delete</button></td></tr>`).join('');
+            const empty = document.getElementById('empty');
+            empty.hidden = data.logs.length !== 0;
+            empty.textContent = 'No matching logs found.';
+            const pages = Math.max(1, Math.ceil(total / pageSize));
+            document.getElementById('pageLabel').textContent = `Page ${page} of ${pages}`;
+            document.getElementById('resultCount').textContent = `${total} matching log${total === 1 ? '' : 's'}`;
+            document.getElementById('previous').disabled = page <= 1;
+            document.getElementById('next').disabled = page >= pages;
+        }
+        function reloadFromFirstPage() { page = 1; clearTimeout(refreshTimer); refreshTimer = setTimeout(() => loadLogs().catch(showError), 250); }
+        function showError(error) { const empty=document.getElementById('empty'); empty.hidden=false; empty.textContent=error.message || 'Could not load logs.'; }
+        ['search','severity','date'].forEach(id => document.getElementById(id).addEventListener('input', reloadFromFirstPage));
+        document.getElementById('refresh').addEventListener('click', loadLogs);
+        document.getElementById('previous').addEventListener('click', () => { if(page > 1){ page--; loadLogs().catch(showError); } });
+        document.getElementById('next').addEventListener('click', () => { if(page * pageSize < total){ page++; loadLogs().catch(showError); } });
+        const deleteModal = document.getElementById('deleteModal');
+        const deletePassword = document.getElementById('deletePassword');
+        function closeDeleteModal() { pendingDeleteId=null; deleteModal.classList.remove('show'); document.getElementById('deleteForm').reset(); document.getElementById('deleteError').textContent=''; }
+        document.getElementById('logsBody').addEventListener('click', event => {
+            const button = event.target.closest('[data-delete-id]');
+            if (!button) return;
+            pendingDeleteId = Number(button.dataset.deleteId);
+            document.getElementById('deleteLogId').textContent = `#${pendingDeleteId}`;
+            deleteModal.classList.add('show');
+            setTimeout(() => deletePassword.focus(), 0);
+        });
+        document.getElementById('cancelDelete').addEventListener('click', closeDeleteModal);
+        deleteModal.addEventListener('click', event => { if (event.target === deleteModal) closeDeleteModal(); });
+        document.addEventListener('keydown', event => { if (event.key === 'Escape' && deleteModal.classList.contains('show')) closeDeleteModal(); });
+        document.getElementById('deleteForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            if (!pendingDeleteId) return;
+            const confirmButton = document.getElementById('confirmDelete');
+            const error = document.getElementById('deleteError');
+            confirmButton.disabled = true;
+            error.textContent = '';
+            try {
+                const response = await fetch(`/api/analytics/logs/${pendingDeleteId}`, {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:deletePassword.value})});
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not delete log');
+                closeDeleteModal();
+                await loadLogs();
+            } catch (failure) { error.textContent = failure.message; deletePassword.select(); }
+            finally { confirmButton.disabled = false; }
+        });
+        loadLogs().catch(showError);
+        setInterval(() => loadLogs().catch(showError), 5000);
+    </script>
+    <script src="/static/js/notification-center.js"></script>
+</body>
+</html>

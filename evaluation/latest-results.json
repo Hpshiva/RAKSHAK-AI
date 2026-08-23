@@ -1,0 +1,11 @@
+{
+  "samples": 57,
+  "tp": 26,
+  "tn": 19,
+  "fp": 6,
+  "fn": 6,
+  "accuracy": 78.9,
+  "precision": 81.2,
+  "recall": 81.2,
+  "f1": 81.2
+}

@@ -1,0 +1,17 @@
+# Dataset configuration for YOLOv8 Custom Training
+# Reference: https://docs.ultralytics.com/datasets/detect/
+
+# Paths to the training, validation, and test images
+path: /Users/shiva/Desktop/shrishail/Rakshak-AI-main/datasets/weapons
+train: images/train
+val: images/val
+test: images/test
+
+# Number of classes
+nc: 3
+
+# Class names
+names:
+  0: person
+  1: gun
+  2: knife

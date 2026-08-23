@@ -1,0 +1,105 @@
+/* ==========================================================
+   RAKSHAK AI — "Claude Warm Editorial" design system
+   Cream canvas, serif display headlines, coral CTAs,
+   dark navy product/data surfaces. See:
+   .claude/skills/claude-warm-editorial/SKILL.md
+========================================================== */
+
+:root {
+    /* Brand & accent */
+    --color-primary: #cc785c;
+    --color-primary-active: #a9583e;
+    --color-primary-disabled: #e6dfd8;
+    --color-accent-teal: #5db8a6;
+    --color-accent-amber: #e8a55a;
+
+    /* Surfaces */
+    --color-canvas: #ffffff;
+    --color-surface-soft: #f5f0e8;
+    --color-surface-card: #efe9de;
+    --color-surface-cream-strong: #e8e0d2;
+    --color-surface-dark: #181715;
+    --color-surface-dark-elevated: #252320;
+    --color-surface-dark-soft: #1f1e1b;
+
+    /* Text */
+    --color-ink: #141413;
+    --color-body: #3d3d3a;
+    --color-body-strong: #252523;
+    --color-muted: #6c6a64;
+    --color-muted-soft: #8e8b82;
+    --color-on-primary: #ffffff;
+    --color-on-dark: #faf9f5;
+    --color-on-dark-soft: #a09d96;
+
+    /* Borders */
+    --color-hairline: #e6dfd8;
+    --color-hairline-soft: #ebe6df;
+
+    /* Semantic */
+    --color-success: #5db872;
+    --color-warning: #d4a017;
+    --color-error: #c64545;
+
+    /* Type */
+    --font-display: 'Fraunces', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Radius */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-pill: 9999px;
+
+    /* Spacing */
+    --space-xxs: 4px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-xxl: 48px;
+
+    /* Elevation */
+    --shadow-soft: 0 1px 3px rgba(20, 20, 19, 0.08);
+    --shadow-card: 0 10px 30px rgba(20, 20, 19, 0.05);
+
+    /* Ruled-paper grid background, layered under the ambient canvas tint.
+       Kept separate from --color-hairline so the grid can carry its own
+       tint (light blue) without recoloring card/input hairline borders. */
+    --grid-line: #bfdbfe;
+    --grid-size: 20px;
+}
+
+/* Shared cream canvas + light-blue grid + warm/teal ambient corners.
+   Apply to body (or a full-bleed backdrop element) on every page. */
+.bg-grid-canvas {
+    background-color: var(--color-canvas);
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        radial-gradient(circle at 10% 15%, rgba(204, 120, 92, 0.06), transparent 45%),
+        radial-gradient(circle at 90% 85%, rgba(93, 184, 166, 0.06), transparent 45%);
+    background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size), auto, auto;
+    background-attachment: fixed;
+}
+
+::selection {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+/* Shared scrollbar treatment for pages that opt in */
+.theme-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.theme-scroll::-webkit-scrollbar-track { background: transparent; }
+.theme-scroll::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: var(--radius-pill); }
+.theme-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-muted-soft); }
+
+/* Small reusable brand-mark gradient used on the shield/logo icon */
+.brand-mark {
+    background: linear-gradient(135deg, var(--color-surface-dark), var(--color-surface-dark-elevated));
+    color: var(--color-on-dark);
+}

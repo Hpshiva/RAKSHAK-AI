@@ -1,0 +1,22 @@
+@import url('theme.css');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: var(--color-ink);
+    background: var(--color-canvas);
+    font-family: var(--font-sans);
+}
+
+.glass-panel {
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-card);
+    box-shadow: var(--shadow-card);
+}

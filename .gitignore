@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+*.py[cod]
+*.pyo
+*.pyd
+models/*.pt
+
+# Virtual Environment
+venv/
+.env/
+.venv/
+
+# Environment Variables
+.env
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Build Files
+build/
+dist/
+
+# Flutter
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+
+# Node
+node_modules/
+
+# Temporary Files
+*.tmp
+*.bak
+
+# AI Models (Large Files)
+ai/models/*.pt
+ai/models/*.pth
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Generated Media
+snapshots/
+snapshots_violence/
+Snapshots_violence/
+recordings/
+uploads/
+reports/**/*.pdf
+reports/*.pdf
+
+# Local test artifacts
+.delete-*
+*.cookies
+
+# Large binaries and media
+tools/mediamtx
+tools/*.dmg
+*.mp4
+*.dmg
+*.crt
+*.key
+# Uploaded faces
+faces/*
+
+# Additional large/generated files
+videos/
+*.pt
+*.pth
+*.onnx

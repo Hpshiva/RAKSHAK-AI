@@ -1,0 +1,10 @@
+{
+  "sample_seconds": 3,
+  "videos": {
+    "video1.mp4": {"incident_ranges": [[6, 13]]},
+    "video2.mp4": {"incident_ranges": [[3, 16]]},
+    "video3.mp4": {"incident_ranges": [[12, 31]]},
+    "video4.mp4": {"incident_ranges": [[8, 42]]},
+    "video5.mp4": {"incident_ranges": [[6, 21]]}
+  }
+}

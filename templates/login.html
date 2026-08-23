@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="background"></div>
+
+    <div class="login-container">
+
+        <div class="logo">
+            <h1>RAKSHAK AI</h1>
+            <p>Protecting Every Student, Every Second</p>
+        </div>
+
+        <div class="login-card">
+
+            <h2 style="text-align: center;">Welcome Back</h2>
+
+            <p class="subtitle">
+                Sign in to School Security Dashboard
+            </p>
+
+            <form id="loginForm" method="POST" action="/">
+
+                <div class="input-group">
+                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></span>
+                    <input type="email" id="email" name="email" placeholder="School Email" required>
+                </div>
+
+                <div class="input-group">
+                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                    <button type="button" class="toggle-password" id="passwordToggle" onclick="togglePassword()" aria-label="Show password" aria-pressed="false">
+                        <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="options">
+
+                    <label>
+
+                        <input type="checkbox" name="remember">
+
+                        Remember Me
+
+                    </label>
+
+                    <a href="/forgot_password">Forgot Password?</a>
+
+                </div>
+
+                {% if error %}
+                <div class="login-error">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <button type="submit">
+
+                    <i class="fa-solid fa-right-to-bracket"></i>
+
+                    LOGIN
+
+                </button>
+
+            </form>
+
+
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+
+</html>

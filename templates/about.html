@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - System SOP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+
+    <!-- Mermaid.js for flowchart diagram -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{primaryColor:'#efe9de', primaryTextColor:'#141413', primaryBorderColor:'#e6dfd8', lineColor:'#cc785c', secondaryColor:'#f5f0e8', tertiaryColor:'#faf9f5', fontFamily:'Inter, sans-serif'}});</script>
+
+    <style>
+        :root {
+            --bg-color: var(--color-canvas);
+            --panel-bg: #ffffff;
+            --text-primary: var(--color-ink);
+            --text-secondary: var(--color-muted);
+            --accent-red: var(--color-error);
+            --accent-green: var(--color-success);
+            --accent-orange: var(--color-warning);
+            --accent-blue: var(--color-primary);
+            --border-color: var(--color-hairline);
+            --card-shadow: var(--shadow-card);
+            --border-radius: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-canvas);
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+                radial-gradient(circle at 10% 15%, rgba(204, 120, 92, 0.06), transparent 45%),
+                radial-gradient(circle at 90% 85%, rgba(93, 184, 166, 0.06), transparent 45%);
+            background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size), auto, auto;
+            background-attachment: fixed;
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+                /* Top Navigation */
+        .topbar-wrapper {
+            width: 100%;
+            padding: 20px 40px 20px 40px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 100;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 10px 24px;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: var(--shadow-soft);
+            transition: all 0.3s ease;
+        }
+
+        .topbar:hover {
+            box-shadow: var(--shadow-card);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--color-surface-dark), var(--color-surface-dark-elevated));
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-on-dark);
+            font-size: 1rem;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            margin-left: 40px;
+            background: var(--color-surface-soft);
+            padding: 5px;
+            border-radius: var(--radius-lg);
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-links a.active {
+            color: var(--text-primary);
+            background: var(--color-surface-card);
+        }
+
+        .nav-links a:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--color-canvas);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .icon-btn:hover {
+            background: var(--color-surface-card);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Content Container */
+        .container {
+            max-width: 900px;
+            margin: 20px auto 40px auto;
+            overflow-y: auto;
+            padding: 40px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 30px;
+        }
+
+        h1.title {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 2.7rem;
+            letter-spacing: -0.5px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 1.7rem;
+            letter-spacing: -0.3px;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-family: var(--font-display);
+            font-weight: 500;
+            font-size: 1.25rem;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: var(--color-body-strong);
+        }
+
+        p {
+            line-height: 1.7;
+            margin-bottom: 15px;
+            color: var(--color-body);
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+            line-height: 1.7;
+            color: var(--color-body);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .alert-box {
+            background-color: rgba(204, 120, 92, 0.08);
+            border-left: 4px solid var(--color-primary);
+            padding: 15px 20px;
+            border-radius: var(--radius-xs);
+            margin: 20px 0;
+            color: var(--color-body-strong);
+        }
+
+        .diagram-container {
+            background: var(--color-surface-soft);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const internalNavigation = sessionStorage.getItem('rakshakInternalNavigation') === '1';
+        sessionStorage.removeItem('rakshakInternalNavigation');
+        if (performance.getEntriesByType('navigation')[0]?.type === 'reload' && !internalNavigation) location.replace('/logout');
+        else {
+            document.addEventListener('click', event => {
+                const link = event.target.closest('a[href]');
+                if (link && new URL(link.href, location.href).origin === location.origin) sessionStorage.setItem('rakshakInternalNavigation', '1');
+            });
+            setTimeout(() => location.replace('/logout'), 300000);
+        }
+    </script>
+
+        <div class="topbar-wrapper">
+        <div class="topbar">
+            <div style="display: flex; align-items: center;">
+                <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
+                    <div class="logo-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    RAKSHAK AI
+                </a>
+                <div class="nav-links">
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/video_analysis">Video Analysis</a>
+                    <a href="/analytics">Analytics</a>
+                    <a href="/faces">Known Faces</a>
+                    <a href="/about" class="active"><i class="fa-regular fa-file-lines"></i> About SOP</a>
+                </div>
+            </div>
+            
+            <div class="top-right">
+                <a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a>
+                <a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">System Architecture & SOP</h1>
+        <p class="subtitle">A complete guide to understanding how Rakshak AI protects the campus.</p>
+
+        <h2>1. Introduction to Rakshak AI</h2>
+        <p>Rakshak AI is an advanced, real-time computer vision security system designed to protect students and staff. Instead of a human security guard staring at a dozen camera feeds all day, Rakshak AI uses artificial intelligence to "watch" the cameras. If it sees something dangerous—like a weapon, a fire, or a physical assault—it immediately triggers alarms, logs the incident, and can even dispatch a security robot.</p>
+        
+        <h2>2. Core Components</h2>
+        <p>The system is broken down into three main pieces working seamlessly together:</p>
+        <ul>
+            <li><strong>The Web Server (The Brain):</strong> This handles user logins, manages the dashboard interface, and communicates with the cameras. It is built using a technology called Flask.</li>
+            <li><strong>The AI Engine (The Eyes):</strong> This processes the video feeds frame-by-frame. It uses "YOLO" (You Only Look Once) to identify objects like people and weapons, and a custom Violence Model to recognize actions like fighting.</li>
+            <li><strong>The Identity Database (The Watchlist):</strong> Uses an advanced Face Recognition engine to instantly cross-reference people on camera with your uploaded database of Known Faces, extracting their digital facial map.</li>
+            <li><strong>The Central Database (The Memory):</strong> This is a secure digital ledger (SQLite) that permanently records every single threat detected, saving the date, time, camera location, the name of the attacker, and the severity level.</li>
+        </ul>
+
+        <h2>3. System Flowchart (Session Chart)</h2>
+        <p>The diagram below shows exactly what happens to the video data from the moment it leaves the camera to the moment it appears on your screen.</p>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+                graph TD
+                    A[Security Camera] -->|Video Feed| B(Zero-Latency Engine)
+                    B -->|Instant Frame| C{AI Engine Worker}
+                    C -->|Object Detection| D[YOLOv8 Model]
+                    C -->|Action Recognition| E[Violence Model]
+                    D --> F[Face Recognition DB]
+                    E --> G[Threat Assessment]
+                    F -->|Identifies Person| G
+                    G -->|Critical Threat!| H[Trigger Smart Audio Alarm]
+                    G -->|Log Identity & Incident| I[(SQLite Database)]
+                    G -->|Draw Named Bounding Boxes| J[Web Dashboard]
+            </div>
+        </div>
+
+        <h2>4. How it Works: A Real-World Example</h2>
+        <p>Let's walk through an example of what happens if a fight breaks out on campus:</p>
+        <div class="alert-box">
+            <strong>Example Scenario:</strong> Two known students, Shrishail and John, begin physically assaulting each other in the Main Hallway.
+            <ol style="margin-top: 10px; margin-left: 20px;">
+                <li><strong>Capture:</strong> The Main Hallway camera captures the video. The <i>Zero-Latency Engine</i> instantly grabs the newest frame, ensuring there is zero lag.</li>
+                <li><strong>Analysis & Identification:</strong> 
+                    <ul>
+                        <li>The YOLO model recognizes that there are two "Persons" in the frame.</li>
+                        <li>The Violence Model analyzes their posture and identifies the action as "Physical Assault".</li>
+                        <li>The Face Recognition Engine scans their faces, extracts their facial structure, and matches them to the "Known Faces" database as Shrishail and John.</li>
+                    </ul>
+                </li>
+                <li><strong>Response:</strong> 
+                    <ul>
+                        <li>The system draws green bounding boxes displaying their names directly on the live video feed.</li>
+                        <li>It logs exactly who committed the violence in the Database.</li>
+                        <li>It triggers the school's PA system to announce intelligently: "Violence detected. Shrishail, John involved in Physical Assault".</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2>5. Security & Privacy</h2>
+        <p>Because Rakshak AI controls campus security, protecting both the system and the privacy of the students is our highest priority.</p>
+        <ul>
+            <li><strong>100% Local Processing (No Cloud):</strong> Unlike many security systems, Rakshak AI processes all video feeds, action recognition, and facial embeddings entirely on your local machine. No video data or student identities are ever sent to the internet or external cloud servers, ensuring strict compliance with student privacy laws.</li>
+            <li><strong>Secure Login:</strong> Administrators must enter a verified Username and Password to access the live feeds, threat logs, and the Identity Database.</li>
+            <li><strong>Forgot Password & OTP:</strong> If an administrator forgets their password, they cannot simply reset it with a click. The system uses a highly secure Two-Factor Authentication (2FA) mechanism. When a password reset is requested, a unique One-Time Password (OTP) is generated and sent to the administrator's registered email address. The administrator must enter this exact OTP into the system to verify their identity before they are allowed to create a new password. This ensures that unauthorized users cannot hijack the security dashboard.</li>
+        </ul>
+
+        <h2>6. Technical Concepts (Simplified)</h2>
+        <h3>Zero-Latency Camera</h3>
+        <p>Normally, web video streams have a 3 to 5-second delay because the computer "buffers" the video to make it smooth. In an emergency, a 5-second delay is too long. We built a custom "Zero-Latency" module that forces the camera to throw away old frames and <i>only</i> send the absolute newest picture, giving you real-time feedback with 0 seconds of lag.</p>
+
+        <h3>YOLO Object Detection</h3>
+        <p>YOLO stands for "You Only Look Once". It is an AI model that acts like a highly trained speed-reader for images. Instead of scanning an image slowly from left to right, it looks at the entire picture all at once and instantly draws boxes around everything it recognizes (like people, bags, or weapons).</p>
+
+        <h3>Facial Embeddings (InsightFace)</h3>
+        <p>When you upload a photo to the Known Faces dashboard, the AI doesn't just "remember" the picture. Instead, it extracts a 128-dimensional "embedding"—which is basically a mathematical map of the distances between the eyes, nose, and jawline. When a person steps in front of the live camera, the AI generates a new map and calculates the difference between the two maps. If they match closely, it immediately identifies the person, even if they are wearing glasses or looking away.</p>
+
+        <h3>Action Recognition (Violence Model)</h3>
+        <p>While YOLO is good at finding <i>objects</i>, it doesn't understand <i>actions</i>. To fix this, Rakshak AI uses a secondary model that analyzes the context of the entire frame. If two people are standing close to each other, it uses deep learning to determine if they are hugging, talking, or fighting.</p>
+        
+        <h2>7. System Requirements</h2>
+        <p>To run Rakshak AI smoothly with all AI models (YOLO + Violence Detection + Face Recognition) operating in real-time, the following hardware is recommended:</p>
+        <ul>
+            <li><strong>Processor (CPU):</strong> A modern multi-core processor (Apple M1/M2/M3, Intel Core i7 10th Gen+, or AMD Ryzen 7+).</li>
+            <li><strong>Memory (RAM):</strong> Minimum 8GB (16GB highly recommended for processing multiple camera feeds simultaneously).</li>
+            <li><strong>Storage:</strong> At least 2GB of free space for storing the AI models, SQLite database logs, and saved threat screenshots.</li>
+            <li><strong>Cameras:</strong> Compatible with any standard USB Webcam, RTSP IP Cameras, or HTTP Video Streams.</li>
+        </ul>
+        
+    </div>
+
+    <script src="/static/js/notification-center.js"></script>
+</body>
+</html>

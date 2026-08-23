@@ -1,0 +1,14 @@
+path: /Users/shiva/Desktop/shrishail/Rakshak-AI-main/violence detection.v4i.yolov8
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names: ['non_violence', 'violence']
+
+roboflow:
+  workspace: securityviolence
+  project: violence-detection-p4qev
+  version: 4
+  license: Public Domain
+  url: https://universe.roboflow.com/securityviolence/violence-detection-p4qev/dataset/4

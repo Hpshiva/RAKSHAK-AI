@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakshak AI - Known Faces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+
+    <style>
+        :root {
+            --bg-color: var(--color-canvas);
+            --panel-bg: #ffffff;
+            --text-primary: var(--color-ink);
+            --text-secondary: var(--color-muted);
+            --accent-red: var(--color-error);
+            --accent-green: var(--color-success);
+            --accent-orange: var(--color-warning);
+            --accent-blue: var(--color-primary);
+            --border-color: var(--color-hairline);
+            --card-shadow: var(--shadow-card);
+            --border-radius: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-canvas);
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+                radial-gradient(circle at 10% 15%, rgba(204, 120, 92, 0.06), transparent 45%),
+                radial-gradient(circle at 90% 85%, rgba(93, 184, 166, 0.06), transparent 45%);
+            background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size), auto, auto;
+            background-attachment: fixed;
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+                /* Top Navigation */
+        .topbar-wrapper {
+            width: 100%;
+            padding: 20px 40px 20px 40px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 100;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 10px 24px;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: var(--shadow-soft);
+            transition: all 0.3s ease;
+        }
+
+        .topbar:hover {
+            box-shadow: var(--shadow-card);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--color-surface-dark), var(--color-surface-dark-elevated));
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-on-dark);
+            font-size: 1rem;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            margin-left: 40px;
+            background: var(--color-surface-soft);
+            padding: 5px;
+            border-radius: var(--radius-lg);
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-links a.active {
+            color: var(--text-primary);
+            background: var(--color-surface-card);
+        }
+
+        .nav-links a:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--color-canvas);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .icon-btn:hover {
+            background: var(--color-surface-card);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: var(--color-on-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-pill);
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(204, 120, 92, 0.24);
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: var(--color-primary-active);
+            transform: scale(1.05);
+        }
+
+        /* Container */
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 20px auto 40px auto;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            padding: 20px 40px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 30px;
+        }
+
+        h2, h3 {
+            font-family: var(--font-display);
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--color-canvas);
+            font-family: inherit;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.16);
+        }
+
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--color-surface-soft);
+            border-radius: var(--radius-sm);
+            border: 1px dashed var(--color-hairline);
+        }
+
+        .faces-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+
+        .face-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .face-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .face-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .face-info {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .face-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--color-surface-card);
+            color: var(--color-muted);
+        }
+        .role-badge.student { background: rgba(93, 184, 166, 0.16); color: #3d8f80; }
+        .role-badge.staff { background: rgba(232, 165, 90, 0.2); color: #92610e; }
+        .role-badge.threat { background: rgba(198, 69, 69, 0.12); color: var(--color-error); }
+
+        .delete-btn, .edit-btn {
+            position: absolute;
+            top: 10px;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .delete-btn {
+            right: 10px;
+            background: rgba(198, 69, 69, 0.9);
+        }
+        .delete-btn:hover {
+            background: var(--color-error);
+            transform: scale(1.1);
+        }
+        .edit-btn {
+            right: 45px;
+            background: rgba(24, 23, 21, 0.85);
+        }
+        .edit-btn:hover {
+            background: var(--color-surface-dark);
+            transform: scale(1.1);
+        }
+
+        .alert-toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-surface-dark);
+            color: var(--color-on-dark);
+            padding: 10px 20px;
+            border-radius: var(--radius-pill);
+            font-weight: 600;
+            box-shadow: 0 12px 30px rgba(20, 20, 19, 0.25);
+            display: none;
+            z-index: 1000;
+        }
+
+        .edit-dialog {
+            width: min(420px, calc(100% - 32px));
+            position: fixed;
+            inset: 0;
+            margin: auto;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 60px rgba(20, 20, 19, 0.2);
+        }
+        .edit-dialog::backdrop { background: rgba(20, 20, 19, 0.45); }
+        .edit-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+        .edit-dialog-actions button { padding: 9px 16px; border: 0; border-radius: var(--radius-pill); cursor: pointer; font-weight: 600; }
+        .edit-dialog-actions .save-edit { background: var(--color-primary); color: white; }
+        .edit-dialog-actions .save-edit:hover { background: var(--color-primary-active); }
+
+    </style>
+</head>
+<body>
+    <script>
+        const internalNavigation = sessionStorage.getItem('rakshakInternalNavigation') === '1';
+        sessionStorage.removeItem('rakshakInternalNavigation');
+        if (performance.getEntriesByType('navigation')[0]?.type === 'reload' && !internalNavigation) location.replace('/logout');
+        else {
+            document.addEventListener('click', event => {
+                const link = event.target.closest('a[href]');
+                if (link && new URL(link.href, location.href).origin === location.origin) sessionStorage.setItem('rakshakInternalNavigation', '1');
+            });
+            setTimeout(() => location.replace('/logout'), 300000);
+        }
+    </script>
+    
+        <div class="topbar-wrapper">
+        <div class="topbar">
+            <div style="display: flex; align-items: center;">
+                <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
+                    <div class="logo-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    RAKSHAK AI
+                </a>
+                <div class="nav-links">
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/video_analysis">Video Analysis</a>
+                    <a href="/analytics">Analytics</a>
+                    <a href="/faces" class="active">Known Faces</a>
+                    <a href="/about"><i class="fa-regular fa-file-lines"></i> About SOP</a>
+                </div>
+            </div>
+            
+            <div class="top-right">
+                <a href="#" class="icon-btn"><i class="fa-regular fa-bell"></i></a>
+                <a href="/logout" class="icon-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-toast" id="alertToast">Face successfully added!</div>
+
+    <dialog class="edit-dialog" id="editFaceDialog">
+        <form id="editFaceForm">
+            <h3 style="margin-bottom: 20px;">Edit Face</h3>
+            <input type="hidden" id="editFilename">
+            <div class="form-group">
+                <label for="editName">Full Name</label>
+                <input type="text" id="editName" required>
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+                <label for="editRole">Role</label>
+                <select id="editRole" required>
+                    <option value="Student">Student</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Unknown">Unknown / Other</option>
+                </select>
+            </div>
+            <div class="edit-dialog-actions">
+                <button type="button" onclick="document.getElementById('editFaceDialog').close()">Cancel</button>
+                <button type="submit" class="save-edit">Save Changes</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="container">
+        <h2 style="margin-bottom: 10px;"><i class="fa-solid fa-users"></i> Known Faces Database</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 30px;">
+            Upload photos of students and staff. When violence is detected, the AI will use facial recognition to identify the attacker.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 30px;">
+            <!-- Top Card: Add Face -->
+            <div class="card" style="margin-bottom: 0;">
+                <h3 style="margin-bottom: 20px;">Add New Face</h3>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="personName">Full Name</label>
+                            <input type="text" id="personName" name="name" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="personRole">Role</label>
+                            <select id="personRole" name="role" required>
+                                <option value="Student">Student</option>
+                                <option value="Staff">Staff</option>
+                                <option value="Unknown">Unknown / Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="personPhoto">Clear Photo (Front Facing)</label>
+                        <input type="file" id="personPhoto" name="file" accept="image/jpeg, image/png, image/jpg" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 10px;"><i class="fa-solid fa-upload"></i> Upload & Train AI</button>
+                </form>
+            </div>
+
+            <!-- Bottom Card: Registered Faces -->
+            <div class="card" style="margin-bottom: 0;">
+                <h3 style="margin-bottom: 20px;">Currently Registered Faces</h3>
+                <div id="facesContainer" style="padding-right: 10px;">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/upload_face', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if(response.ok) {
+                    document.getElementById('uploadForm').reset();
+                    showToast('Face successfully added!');
+                    loadFaces();
+                } else {
+                    const err = await response.json();
+                    alert("Error: " + (err.error || "Could not upload face."));
+                }
+            } catch (err) {
+                alert("Network error occurred.");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+
+        async function loadFaces() {
+            try {
+                const response = await fetch('/api/faces');
+                const faces = await response.json();
+                
+                const container = document.getElementById('facesContainer');
+                container.innerHTML = '';
+                
+                if (faces.length === 0) {
+                    container.innerHTML = '<p style="color: var(--color-muted);">No faces registered yet. Upload one above!</p>';
+                    return;
+                }
+
+                const students = faces.filter(f => f.role && f.role.toLowerCase() === 'student');
+                const staff = faces.filter(f => f.role && f.role.toLowerCase() === 'staff');
+                const others = faces.filter(f => !f.role || (f.role.toLowerCase() !== 'student' && f.role.toLowerCase() !== 'staff'));
+
+                function renderSection(title, faceList) {
+                    if (faceList.length === 0) return '';
+                    let html = `<h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">${escapeHtml(title)} (${faceList.length})</h4>`;
+                    html += `<div class="faces-grid">`;
+                    faceList.forEach(face => {
+                        let roleBadge = '';
+                        if (face.role) {
+                            const roleClass = face.role.toLowerCase() === 'student' ? 'student' : (face.role.toLowerCase() === 'staff' ? 'staff' : '');
+                            roleBadge = `<div class="role-badge ${roleClass}">${escapeHtml(face.role)}</div>`;
+                        }
+
+                        html += `
+                            <div class="face-card">
+                                <button class="edit-btn" data-filename="${escapeHtml(face.filename)}" data-name="${escapeHtml(face.name)}" data-role="${escapeHtml(face.role || '')}" title="Edit">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="delete-btn" data-filename="${escapeHtml(face.filename)}" title="Delete">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                <img src="/faces_img/${escapeHtml(face.filename)}" alt="${escapeHtml(face.name)}">
+                                <div class="face-info">
+                                    <div class="face-name">${escapeHtml(face.name)}</div>
+                                    ${roleBadge}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                    return html;
+                }
+
+                container.innerHTML += renderSection('Students', students);
+                container.innerHTML += renderSection('Staff', staff);
+                container.innerHTML += renderSection('Unknown / Other', others);
+            } catch (err) {
+                console.error("Failed to load faces:", err);
+            }
+        }
+
+        async function deleteFace(filename) {
+            if(!confirm("Are you sure you want to delete this face?")) return;
+            
+            try {
+                const response = await fetch('/api/delete_face', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filename: filename})
+                });
+                
+                if(response.ok) {
+                    showToast('Face deleted!');
+                    loadFaces();
+                }
+            } catch (err) {
+                alert("Error deleting face");
+            }
+        }
+
+        function editFace(filename, oldName, oldRole) {
+            document.getElementById('editFilename').value = filename;
+            document.getElementById('editName').value = oldName;
+            const normalizedRole = ['Student', 'Staff'].find(role => role.toLowerCase() === (oldRole || '').toLowerCase()) || 'Unknown';
+            document.getElementById('editRole').value = normalizedRole;
+            document.getElementById('editFaceDialog').showModal();
+        }
+
+        document.getElementById('facesContainer').addEventListener('click', (event) => {
+            const editBtn = event.target.closest('.edit-btn');
+            if (editBtn) {
+                editFace(editBtn.dataset.filename, editBtn.dataset.name, editBtn.dataset.role);
+                return;
+            }
+            const deleteBtn = event.target.closest('.delete-btn');
+            if (deleteBtn) {
+                deleteFace(deleteBtn.dataset.filename);
+            }
+        });
+
+        document.getElementById('editFaceForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const filename = document.getElementById('editFilename').value;
+            const newName = document.getElementById('editName').value.trim();
+            const newRole = document.getElementById('editRole').value;
+
+            try {
+                const response = await fetch('/api/edit_face', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        old_filename: filename,
+                        new_name: newName,
+                        new_role: newRole
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('editFaceDialog').close();
+                    showToast('Face updated!');
+                    loadFaces();
+                } else {
+                    const err = await response.json();
+                    alert("Error editing face: " + (err.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error occurred.");
+            }
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('alertToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load initially
+        loadFaces();
+    </script>
+    <script src="/static/js/notification-center.js"></script>
+</body>
+</html>
