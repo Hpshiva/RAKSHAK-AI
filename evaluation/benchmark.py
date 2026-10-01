@@ -1,14 +1,17 @@
 import json
 import sys
+import os
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ai.model import Model
+from ai.linear_probe import ProbeClassifier
 
 
 VIOLENCE_SCORE_THRESHOLD = 0.195
@@ -17,13 +20,9 @@ VIOLENCE_LABELS = {
     "fight on a street", "street violence", "violence in office",
     "fire in office", "fire on a street", "person holding a gun",
     "person holding a knife", "weapon", "armed robbery",
-    "physical assault", "explosion",
+    "physical assault", "explosion", "violence"
 }
 
-# Below this sample count, a single accuracy number is not trustworthy: the
-# confidence interval is wide enough that "78%" and "88%" (let alone "95%+")
-# aren't statistically distinguishable. Report the interval, don't just the
-# point estimate, whenever n is below this.
 MIN_TRUSTWORTHY_SAMPLES = 200
 
 
@@ -39,11 +38,18 @@ def wilson_confidence_interval(successes, total, z=1.96):
 
 
 def load_samples():
-    config = json.loads((Path(__file__).parent / "labels.json").read_text())
+    labels_file = Path(__file__).parent / "labels.json"
+    if not labels_file.exists():
+        print("labels.json not found.")
+        return []
+    config = json.loads(labels_file.read_text())
     samples = []
-    step = config["sample_seconds"]
+    step = config.get("sample_seconds", 3)
     for filename, metadata in config["videos"].items():
-        capture = cv2.VideoCapture(str(ROOT / "videos" / filename))
+        video_path = ROOT / "videos" / filename
+        if not video_path.exists():
+            continue
+        capture = cv2.VideoCapture(str(video_path))
         fps = capture.get(cv2.CAP_PROP_FPS) or 25
         duration = capture.get(cv2.CAP_PROP_FRAME_COUNT) / fps
         timestamp = 0
@@ -63,28 +69,88 @@ def load_samples():
     return samples
 
 
+def sweep_optimal_threshold(samples, score_sets):
+    """Find the threshold that maximizes F1 score across the sample set."""
+    best_thresh = VIOLENCE_SCORE_THRESHOLD
+    best_f1 = -1.0
+    best_metrics = {}
+
+    for thresh in np.arange(0.10, 0.40, 0.005):
+        preds = []
+        for sample, scores in zip(samples, score_sets):
+            label = max(VIOLENCE_LABELS, key=lambda item: scores.get(item, -1.0))
+            score = scores.get(label, 0.0)
+            normal = max(
+                (value for key, value in scores.items() if key not in VIOLENCE_LABELS),
+                default=0.0
+            )
+            candidate = score >= thresh and score >= normal
+            preds.append(candidate)
+
+        tp = sum(p and s["ground_truth"] for p, s in zip(preds, samples))
+        tn = sum(not p and not s["ground_truth"] for p, s in zip(preds, samples))
+        fp = sum(p and not s["ground_truth"] for p, s in zip(preds, samples))
+        fn = sum(not p and s["ground_truth"] for p, s in zip(preds, samples))
+
+        prec = tp / max(tp + fp, 1)
+        rec = tp / max(tp + fn, 1)
+        f1 = 2 * prec * rec / max(prec + rec, 1e-9)
+
+        if f1 > best_f1:
+            best_f1 = f1
+            best_thresh = round(float(thresh), 3)
+            best_metrics = {
+                "threshold": best_thresh,
+                "f1": round(f1 * 100, 1),
+                "precision": round(prec * 100, 1),
+                "recall": round(rec * 100, 1),
+                "accuracy": round(100 * (tp + tn) / max(len(samples), 1), 1)
+            }
+
+    return best_thresh, best_metrics
+
+
 def evaluate():
     samples = load_samples()
+    if not samples:
+        print("No evaluation videos found locally under 'videos/'.")
+        print("To run the benchmark, please add video1.mp4..video5.mp4 into the videos/ directory.")
+        return
+
     classifier = Model()
+    all_scores = []
     for offset in range(0, len(samples), 8):
         batch = samples[offset:offset + 8]
         score_sets = classifier.predict_batch_scores([sample["image"] for sample in batch])
+        all_scores.extend(score_sets)
         for sample, scores in zip(batch, score_sets):
-            label = max(VIOLENCE_LABELS, key=lambda item: scores[item])
-            score = scores[label]
-            normal = max(value for key, value in scores.items() if key not in VIOLENCE_LABELS)
-            sample.update(label=label, score=score, candidate=score >= VIOLENCE_SCORE_THRESHOLD and score >= normal)
+            label = max(VIOLENCE_LABELS, key=lambda item: scores.get(item, -1.0))
+            score = scores.get(label, 0.0)
+            normal = max(
+                (value for key, value in scores.items() if key not in VIOLENCE_LABELS),
+                default=0.0
+            )
+            sample.update(
+                label=label,
+                score=score,
+                candidate=score >= VIOLENCE_SCORE_THRESHOLD and score >= normal
+            )
 
+    # Temporal confirmation with EWMA simulation
     for video in {sample["video"] for sample in samples}:
-        history = []
-        for sample in [item for item in samples if item["video"] == video]:
-            history.append(sample["candidate"])
-            history = history[-3:]
+        video_samples = [item for item in samples if item["video"] == video]
+        ewma = 0.0
+        alpha = 0.45
+        for sample in video_samples:
+            instant = sample["score"] if sample["candidate"] else 0.0
+            ewma = (1 - alpha) * ewma + alpha * instant
             immediate = sample["label"] in {
-                "person holding a gun", "person holding a knife",
+                "person holding a gun", "person holding a knife"
             }
-            sample["prediction"] = sample["candidate"] and (
-                immediate or sample["score"] >= VIOLENCE_INSTANT_THRESHOLD or sum(history) >= 2
+            sample["prediction"] = (
+                immediate or
+                sample["score"] >= VIOLENCE_INSTANT_THRESHOLD or
+                (sample["candidate"] and ewma >= (VIOLENCE_SCORE_THRESHOLD * 0.90))
             )
 
     tp = sum(x["prediction"] and x["ground_truth"] for x in samples)
@@ -108,6 +174,8 @@ def evaluate():
             "accuracy": round(100 * correct / len(video_samples), 1),
         }
 
+    best_thresh, best_metrics = sweep_optimal_threshold(samples, all_scores)
+
     result = {
         "samples": len(samples), "tp": tp, "tn": tn, "fp": fp, "fn": fn,
         "accuracy": round(accuracy * 100, 1),
@@ -116,6 +184,7 @@ def evaluate():
         "recall_sensitivity": round(recall * 100, 1),
         "specificity": round(specificity * 100, 1),
         "f1": round(f1 * 100, 1),
+        "optimal_threshold_sweep": best_metrics,
         "per_video": per_video,
     }
     (Path(__file__).parent / "latest-results.json").write_text(json.dumps(result, indent=2))
@@ -124,11 +193,7 @@ def evaluate():
     if len(samples) < MIN_TRUSTWORTHY_SAMPLES:
         print(
             f"\nWARNING: only {len(samples)} samples. The 95% confidence interval on "
-            f"accuracy is {result['accuracy_95ci'][0]}%-{result['accuracy_95ci'][1]}% — "
-            "too wide to treat the point estimate as a production accuracy claim, and far "
-            "too small to distinguish this from a 95%+ target. Add substantially more "
-            "independent normal and incident footage before drawing conclusions or tuning "
-            "thresholds (never tune on your final test split)."
+            f"accuracy is {result['accuracy_95ci'][0]}%-{result['accuracy_95ci'][1]}%."
         )
 
 

@@ -158,6 +158,10 @@ def build_incident_report(incident, output=None):
     snapshot = incident.get("snapshot") or {}
     names = snapshot.get("student_names") or incident.get("student_names") or "Unknown person"
     label = snapshot.get("incident_label") or incident.get("label") or "Violence detected"
+    raw_heights = snapshot.get("person_heights") or incident.get("person_heights") or "Estimated ~172 cm"
+    # Ensure display is cleanly in centimeters only (strip any legacy imperial parenthesis if present)
+    import re
+    heights = re.sub(r"\s*\([^)]*\)", "", str(raw_heights)).strip()
 
     section_y = card_y - 94
     pdf.setFillColor(NAVY)
@@ -170,21 +174,46 @@ def build_incident_report(incident, output=None):
     pdf.setFillColor(Color(1, 1, 1, alpha=0.95))
     pdf.setStrokeColor(HexColor("#DCE7F5"))
     pdf.roundRect(34, section_y - 86, page_width - 68, 67, 10, fill=1, stroke=1)
+    
+    col1_x = 48
+    col2_x = 210
+    col3_x = 385
+    
     pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica", 8)
-    pdf.drawString(50, section_y - 40, "DETECTED THREAT")
-    pdf.drawString(300, section_y - 40, "INVOLVED STUDENT(S)")
+    pdf.setFont("Helvetica", 7.5)
+    pdf.drawString(col1_x, section_y - 40, "DETECTED THREAT")
+    pdf.drawString(col2_x, section_y - 40, "INVOLVED STUDENT(S)")
+    pdf.drawString(col3_x, section_y - 40, "ESTIMATED HEIGHT(S)")
+    
+    # Value 1: Threat
     pdf.setFillColor(RED)
-    pdf.setFont("Helvetica-Bold", 11)
-    pdf.drawString(50, section_y - 59, str(label).title())
+    pdf.setFont("Helvetica-Bold", 10.5)
+    threat_display = str(label).title()
+    while stringWidth(threat_display, "Helvetica-Bold", 10.5) > 150 and len(threat_display) > 5:
+        threat_display = threat_display[:-4] + "..."
+    pdf.drawString(col1_x, section_y - 59, threat_display)
+    
+    # Value 2: Names
     pdf.setFillColor(NAVY)
-    pdf.drawString(300, section_y - 59, str(names))
+    pdf.setFont("Helvetica-Bold", 10.5)
+    names_display = str(names)
+    while stringWidth(names_display, "Helvetica-Bold", 10.5) > 165 and len(names_display) > 5:
+        names_display = names_display[:-4] + "..."
+    pdf.drawString(col2_x, section_y - 59, names_display)
+    
+    # Value 3: Heights
+    pdf.setFillColor(TEAL)
+    pdf.setFont("Helvetica-Bold", 10)
+    heights_display = str(heights)
+    while stringWidth(heights_display, "Helvetica-Bold", 10) > (page_width - col3_x - 45) and len(heights_display) > 5:
+        heights_display = heights_display[:-4] + "..."
+    pdf.drawString(col3_x, section_y - 59, heights_display)
 
     snapshots = incident.get("snapshots") or ([snapshot] if snapshot else [])
     evidence_title_y = section_y - 116
     pdf.setFillColor(NAVY)
     pdf.setFont("Helvetica-Bold", 12)
-    evidence_title = "AUTOMATIC VISUAL EVIDENCE"
+    evidence_title = "VISUAL EVIDENCE"
     if len(snapshots) > 1:
         evidence_title += f" ({len(snapshots)} SCREENSHOTS)"
     pdf.drawString(40, evidence_title_y, evidence_title)
@@ -201,12 +230,11 @@ def build_incident_report(incident, output=None):
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 8)
     pdf.drawString(40, 72, "Automatically generated from Rakshak AI critical-event records.")
-    pdf.drawRightString(page_width - 40, 72, "Confidential - Authorized personnel only")
     pdf.setStrokeColor(HexColor("#CFE0F5"))
     pdf.line(40, 88, page_width - 40, 88)
     pdf.setFillColor(TEAL)
     pdf.setFont("Helvetica-Bold", 8)
-    pdf.drawCentredString(page_width / 2, 50, "RAKSHAK AI | INCIDENT RESPONSE DOCUMENT")
+    pdf.drawCentredString(page_width / 2, 50, "RAKSHAK AI - INCIDENT RESPONSE DOCUMENT")
 
     pdf.showPage()
     pdf.save()

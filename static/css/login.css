@@ -12,7 +12,14 @@ body {
     min-height: 100vh;
     overflow: hidden;
     font-family: var(--font-sans);
-    background: var(--color-canvas);
+    background-color: var(--color-canvas, #faf9f5);
+    background-image:
+        linear-gradient(var(--grid-line, #bfdbfe) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line, #bfdbfe) 1px, transparent 1px),
+        radial-gradient(circle at 12% 18%, rgba(204, 120, 92, 0.10), transparent 45%),
+        radial-gradient(circle at 88% 82%, rgba(93, 184, 166, 0.10), transparent 45%);
+    background-size: var(--grid-size, 20px) var(--grid-size, 20px), var(--grid-size, 20px) var(--grid-size, 20px), auto, auto;
+    background-attachment: fixed;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -23,14 +30,15 @@ body {
 .background {
     position: fixed;
     inset: 0;
-    background-color: var(--color-canvas);
+    pointer-events: none;
+    background-color: transparent;
     background-image:
-        linear-gradient(var(--grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(var(--grid-line, #bfdbfe) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line, #bfdbfe) 1px, transparent 1px),
         radial-gradient(circle at 12% 18%, rgba(204, 120, 92, 0.10), transparent 45%),
         radial-gradient(circle at 88% 82%, rgba(93, 184, 166, 0.10), transparent 45%);
-    background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size), auto, auto;
-    z-index: -2;
+    background-size: var(--grid-size, 20px) var(--grid-size, 20px), var(--grid-size, 20px) var(--grid-size, 20px), auto, auto;
+    z-index: 0;
 }
 
 /* ==========================================================

@@ -648,10 +648,6 @@
                     <div class="label">System Threat</div>
                     <div class="value system-threat-value" id="system-threat">Normal</div>
                 </div>
-                <div class="status-stat">
-                    <div class="label">Cameras</div>
-                    <div class="value" id="system-cameras">0</div>
-                </div>
             </div>
 
             <div class="card-header alerts-header">
@@ -707,12 +703,17 @@
             }
         }
 
+        function getCameraDisabledPlaceholder(camId) {
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="100%" height="100%" fill="#141413"/><text x="50%" y="50%" fill="#faf9f5" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="22" font-weight="600" text-anchor="middle">Camera ${camId} Disabled</text></svg>`)}`;
+        }
+
         async function loadCameras() {
             try {
                 const res = await fetch('/api/cameras');
                 const data = await res.json();
                 const container = document.getElementById('dynamic-cameras-container');
-                document.getElementById('system-cameras').textContent = data.cameras.length;
+                const sysCam = document.getElementById('system-cameras');
+                if (sysCam) sysCam.textContent = data.cameras.length;
                 
                 data.cameras.forEach(camId => {
                     const card = document.createElement('div');
@@ -725,7 +726,7 @@
                             </div>
                             <button onclick="toggleWebcam(this, ${camId})" class="pill badge-red camera-toggle">Turn On</button>
                         </div>
-                        <img src="/camera_feed/${camId}" class="video-feed" alt="Camera ${camId}" onerror="handleCameraFeedError(this, ${camId})">
+                        <img src="${getCameraDisabledPlaceholder(camId)}" class="video-feed" alt="Camera ${camId}" onerror="handleCameraFeedError(this, ${camId})">
                         <div class="controls-overlay camera-controls">
                             <button onclick="toggleFullscreen(this)" class="btn-circle camera-fullscreen" title="Full screen (F)">
                                 <i class="fa-solid fa-expand"></i>
@@ -762,14 +763,24 @@
                 body: JSON.stringify({ camera_id: camId })
             });
             const data = await res.json();
+            const container = btn.closest('.video-container');
+            const img = container ? container.querySelector('.video-feed') : document.querySelector(`img[src*="/camera_feed/${camId}"]`);
             if (data.webcam_enabled) {
                 btn.textContent = "Turn Off";
-                btn.className = "pill badge-green";
-                document.getElementById('webcam-dot-' + camId).style.display = 'block';
+                btn.className = "pill badge-green camera-toggle";
+                const dot = document.getElementById('webcam-dot-' + camId);
+                if (dot) dot.style.display = 'block';
+                if (img) {
+                    img.src = `/camera_feed/${camId}?t=${Date.now()}`;
+                }
             } else {
                 btn.textContent = "Turn On";
-                btn.className = "pill badge-red";
-                document.getElementById('webcam-dot-' + camId).style.display = 'none';
+                btn.className = "pill badge-red camera-toggle";
+                const dot = document.getElementById('webcam-dot-' + camId);
+                if (dot) dot.style.display = 'none';
+                if (img) {
+                    img.src = getCameraDisabledPlaceholder(camId);
+                }
             }
         }
 

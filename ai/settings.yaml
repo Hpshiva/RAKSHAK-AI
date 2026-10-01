@@ -36,4 +36,16 @@ label-settings:
     - physical assault
     - explosion
 
+    # Benign Contrastive Classes (Hard Negatives to Prevent False Positives)
+    - person holding a mobile phone
+    - person holding a water bottle
+    - person holding an umbrella or stick
+    - people hugging or greeting
+    - people dancing or playing sports
+    - people shaking hands
+    - person running for exercise
+    - students sitting in classroom
+    - person carrying a backpack or bag
+    - person drinking water or eating
+
   default-label: Unknown

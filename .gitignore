@@ -84,3 +84,13 @@ videos/
 *.pt
 *.pth
 *.onnx
+*.cache
+database/*.db*
+database/rakshak.db*
+runs/detect/rakshak_custom_model-7/
+runs/detect/val*/
+runs/detect/rakshak_custom_model/*.png
+runs/detect/rakshak_custom_model/*.jpg
+runs/detect/rakshak_custom_model/*.csv
+violence detection1.v4i.yolov8/
+

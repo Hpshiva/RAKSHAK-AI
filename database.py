@@ -8,7 +8,10 @@ DB_PATH = Path(__file__).resolve().parent / "database" / "rakshak.db"
 db_lock = threading.Lock()
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
+    conn.execute("PRAGMA busy_timeout = 5000;")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -26,6 +29,7 @@ def initialize_database():
         confidence REAL,
         severity TEXT,
         camera TEXT,
+        person_heights TEXT,
         detected_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )
     """)
@@ -38,10 +42,17 @@ def initialize_database():
         camera TEXT,
         incident_label TEXT,
         student_names TEXT,
+        person_heights TEXT,
         created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
         FOREIGN KEY(detection_id) REFERENCES detections(id)
     )
     """)
+
+    detection_columns = {
+        row[1] for row in cursor.execute("PRAGMA table_info(detections)").fetchall()
+    }
+    if "person_heights" not in detection_columns:
+        cursor.execute("ALTER TABLE detections ADD COLUMN person_heights TEXT")
 
     snapshot_columns = {
         row[1] for row in cursor.execute("PRAGMA table_info(snapshots)").fetchall()
@@ -50,6 +61,7 @@ def initialize_database():
         "camera": "TEXT",
         "incident_label": "TEXT",
         "student_names": "TEXT",
+        "person_heights": "TEXT",
     }.items():
         if column not in snapshot_columns:
             cursor.execute(f"ALTER TABLE snapshots ADD COLUMN {column} {definition}")
@@ -75,6 +87,12 @@ def initialize_database():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    # Performance indexes for high-frequency queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_detected_at ON detections(detected_at);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_severity ON detections(severity);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_detection_id ON snapshots(detection_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_created_at ON snapshots(created_at);")
 
     conn.commit()
     conn.close()
@@ -102,28 +120,39 @@ def should_save_detection(label, camera, cooldown=5):
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     return now_utc - last_detection > timedelta(seconds=cooldown)
 
-def save_detection(label, confidence, severity, camera, cooldown=5):
-    if str(severity).upper() != "CRITICAL":
-        return None
+def save_detection(label, confidence, severity, camera, cooldown=5, person_heights=None):
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT detected_at FROM detections
+            SELECT id, confidence, detected_at FROM detections
             WHERE label = ? AND camera = ? AND severity = ?
             ORDER BY id DESC LIMIT 1
         """, (label, camera, severity))
         latest = cursor.fetchone()
-        if latest:
-            last_detection = datetime.fromisoformat(latest["detected_at"])
-            now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-            if now_utc - last_detection <= timedelta(seconds=cooldown):
-                conn.close()
-                return None
+        heights_str = ", ".join(person_heights) if isinstance(person_heights, (list, tuple)) else str(person_heights or "")
+        if latest and latest["detected_at"]:
+            try:
+                last_detection = datetime.fromisoformat(str(latest["detected_at"]))
+                now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+                if now_utc - last_detection <= timedelta(seconds=cooldown):
+                    # Active incident window: retain and update to PEAK confidence
+                    existing_conf = float(latest["confidence"] or 0)
+                    if float(confidence or 0) > existing_conf:
+                        cursor.execute("""
+                            UPDATE detections
+                            SET confidence = ?, person_heights = COALESCE(?, person_heights)
+                            WHERE id = ?
+                        """, (confidence, heights_str if heights_str else None, latest["id"]))
+                        conn.commit()
+                    conn.close()
+                    return latest["id"]
+            except Exception:
+                pass
         cursor.execute("""
-            INSERT INTO detections (label, confidence, severity, camera)
-            VALUES (?, ?, ?, ?)
-        """, (label, confidence, severity, camera))
+            INSERT INTO detections (label, confidence, severity, camera, person_heights)
+            VALUES (?, ?, ?, ?, ?)
+        """, (label, confidence, severity, camera, heights_str if heights_str else None))
         detection_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -143,39 +172,42 @@ def get_recent_face_detections(limit=5):
     conn.close()
     return [dict(row) for row in rows]
 
-def save_snapshot(path, camera=None, incident_label=None, student_names=None):
+def save_snapshot(path, camera=None, incident_label=None, student_names=None, person_heights=None):
 
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
+        heights_str = ", ".join(person_heights) if isinstance(person_heights, (list, tuple)) else str(person_heights or "")
         cursor.execute("""
-            INSERT INTO snapshots (path, camera, incident_label, student_names)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO snapshots (path, camera, incident_label, student_names, person_heights)
+            VALUES (?, ?, ?, ?, ?)
         """, (
             path,
             camera,
             incident_label,
             ", ".join(student_names or []),
+            heights_str if heights_str else None,
         ))
         conn.commit()
         conn.close()
 
-def get_incident_report_data(detection_id=None, camera=None):
+def get_incident_report_data(detection_id=None, camera=None, max_age_seconds=None):
     """Return a critical incident and its closest saved violence screenshot."""
     conn = get_connection()
     cursor = conn.cursor()
+    age_filter = ""
+    if max_age_seconds is not None:
+        age_filter = "AND ABS(strftime('%s', 'now') - strftime('%s', detected_at)) <= ?"
+
+    order_clause = "ORDER BY confidence DESC, id DESC" if max_age_seconds is not None else "ORDER BY id DESC"
     if detection_id is None and camera:
-        detection = cursor.execute("""
-            SELECT * FROM detections
-            WHERE severity = 'CRITICAL' AND camera = ?
-            ORDER BY id DESC LIMIT 1
-        """, (camera,)).fetchone()
+        query = f"SELECT * FROM detections WHERE severity = 'CRITICAL' AND camera = ? {age_filter} {order_clause} LIMIT 1"
+        params = (camera, max_age_seconds) if max_age_seconds is not None else (camera,)
+        detection = cursor.execute(query, params).fetchone()
     elif detection_id is None:
-        detection = cursor.execute("""
-            SELECT * FROM detections
-            WHERE severity = 'CRITICAL'
-            ORDER BY id DESC LIMIT 1
-        """).fetchone()
+        query = f"SELECT * FROM detections WHERE severity = 'CRITICAL' {age_filter} {order_clause} LIMIT 1"
+        params = (max_age_seconds,) if max_age_seconds is not None else ()
+        detection = cursor.execute(query, params).fetchone()
     else:
         detection = cursor.execute("""
             SELECT * FROM detections
@@ -261,21 +293,21 @@ def get_detection_count():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) AS total FROM detections")
-
-    total = cursor.fetchone()["total"]
+    cursor.execute("SELECT COUNT(*) FROM detections")
+    total = cursor.fetchone()[0]
 
     conn.close()
 
     return total
 
 def delete_detection(detection_id):
-    """Delete exactly one analytics event and report whether it existed."""
+    """Delete exactly one analytics event and associated snapshots."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
+        cursor.execute("DELETE FROM snapshots WHERE detection_id = ?", (detection_id,))
         cursor.execute("DELETE FROM detections WHERE id = ?", (detection_id,))
-        deleted = cursor.rowcount == 1
+        deleted = cursor.rowcount > 0
         conn.commit()
         conn.close()
     return deleted
@@ -312,7 +344,6 @@ def get_all_detections(search="", severity="", date="", page=1, page_size=50):
                     )) * 86400 > 5
                 THEN 1 ELSE 0 END AS new_event
             FROM detections
-            WHERE severity = 'CRITICAL'
         ), grouped AS (
             SELECT *, SUM(new_event) OVER (
                 PARTITION BY lower(label), camera, severity ORDER BY detected_at, id
