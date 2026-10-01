@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Rakshak AI | {{ title }}{% endblock %}
+
+{% block header_title %}{{ title }}{% endblock %}
+{% block header_subtitle %}Module under construction{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <div><i class="fa-solid fa-wrench"></i> Development in Progress</div>
+    </div>
+    <div class="panel-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center;">
+        <i class="fa-solid fa-person-digging" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 20px;"></i>
+        <h2 style="margin-bottom: 10px;">{{ title }}</h2>
+        <p style="color: var(--text-secondary); max-width: 400px;">
+            This module is currently being developed. It will be available in the upcoming software update.
+        </p>
+        <a href="/dashboard" class="time-badge" style="margin-top: 30px; text-decoration: none; display: inline-block;">
+            <i class="fa-solid fa-arrow-left"></i> Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
