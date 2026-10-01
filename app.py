@@ -760,28 +760,7 @@ def generate_report():
         incident = get_incident_report_data(camera=camera, max_age_seconds=600 if is_active else 120)
 
     if not incident:
-        message = (
-            "<!DOCTYPE html><html><head><title>No Threat Found</title>"
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            "<style>"
-            "body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}"
-            ".card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;text-align:center;max-width:440px;box-shadow:0 8px 24px rgba(0,0,0,0.5);}"
-            ".icon{font-size:44px;color:#f85149;margin-bottom:16px;}"
-            "h2{margin:0 0 12px 0;color:#f0f6fc;font-size:1.4rem;}"
-            "p{color:#8b949e;line-height:1.5;margin:0 0 24px 0;font-size:0.95rem;}"
-            ".btn{display:inline-block;padding:10px 18px;border-radius:6px;font-size:0.9rem;text-decoration:none;font-weight:500;margin:0 6px;}"
-            ".btn-primary{background:#238636;color:#fff;}"
-            ".btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d;}"
-            "</style></head><body>"
-            "<div class='card'>"
-            "<div class='icon'>🛡️</div>"
-            "<h2>No Threat Detected</h2>"
-            "<p>No active or recent critical security incident is present to generate a report. Reports are automatically enabled during active threats or can be downloaded from past logs in Analytics.</p>"
-            "<a href='/dashboard' class='btn btn-primary'>Live Dashboard</a>"
-            "<a href='/analytics' class='btn btn-secondary'>View Analytics</a>"
-            "</div></body></html>"
-        )
-        return message, 404
+        return render_template("no_threat.html"), 404
 
     snapshot = incident.get("snapshot") or {}
     if not snapshot.get("student_names"):
@@ -1095,7 +1074,7 @@ initialize_database()
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return "Page not found", 404
+    return render_template("404.html"), 404
 
 @app.errorhandler(500)
 def internal_error(error):

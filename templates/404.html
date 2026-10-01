@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Feed Not Found | Rakshak AI</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='Logo.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f7f6f0;
+            --card-bg: rgba(255, 255, 255, 0.94);
+            --text-primary: #1e1e1e;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --accent-terracotta: #cc785c;
+            --accent-terracotta-hover: #b8654a;
+            --accent-navy: #192a42;
+            --accent-blue: #3b82f6;
+            --border-color: #e2e8f0;
+            --hairline: #e9ecef;
+            --shadow-subtle: 0 20px 45px rgba(20, 20, 19, 0.08), 0 4px 12px rgba(20, 20, 19, 0.04);
+            --radius-card: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(to right, rgba(147, 197, 253, 0.22) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(147, 197, 253, 0.22) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient subtle glowing accents */
+        .ambient-glow {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(204, 120, 92, 0.08) 0%, rgba(59, 130, 246, 0.04) 50%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .error-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 540px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-subtle);
+            padding: 44px 40px;
+            text-align: center;
+            animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .brand-header {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+            transition: transform 0.3s ease;
+        }
+
+        .brand-header:hover .brand-logo {
+            transform: scale(1.06) rotate(3deg);
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* Sector Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.22);
+            color: #dc2626;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 20px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulseAlert 1.8s infinite;
+        }
+
+        @keyframes pulseAlert {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* 404 Headline Display */
+        .numeral-display {
+            font-family: 'Newsreader', Georgia, serif;
+            font-size: 6.5rem;
+            line-height: 1;
+            font-weight: 600;
+            color: var(--accent-navy);
+            letter-spacing: -3px;
+            margin-bottom: 8px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .numeral-display span {
+            color: var(--accent-terracotta);
+            font-style: italic;
+        }
+
+        .error-title {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+            margin-bottom: 12px;
+        }
+
+        .error-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 32px;
+            max-width: 440px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Action Buttons */
+        .actions-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-terracotta);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(204, 120, 92, 0.3);
+            border: 1px solid transparent;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-terracotta-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(204, 120, 92, 0.4);
+            color: #ffffff;
+        }
+
+        .btn-secondary {
+            background-color: #ffffff;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-secondary:hover {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+        }
+
+        /* Footer Telemetry Stamp */
+        .telemetry-footer {
+            border-top: 1px solid var(--hairline);
+            padding-top: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .telemetry-footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .telemetry-footer a:hover {
+            color: var(--accent-terracotta);
+        }
+
+        @media (max-width: 480px) {
+            .error-card {
+                padding: 32px 24px;
+            }
+            .numeral-display {
+                font-size: 4.8rem;
+            }
+            .actions-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .telemetry-footer {
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow"></div>
+
+    <div class="error-card">
+        <!-- Brand Header -->
+        <a href="/dashboard" class="brand-header">
+            <img src="{{ url_for('static', filename='Logo.png') }}" alt="Rakshak AI Logo" class="brand-logo">
+            <span class="brand-title">RAKSHAK AI</span>
+        </a>
+
+        <!-- Sector Status -->
+        <div>
+            <div class="status-badge">
+                <span class="pulse-dot"></span>
+                <span>Feed Offline // Node Unreachable</span>
+            </div>
+        </div>
+
+        <!-- 404 Display -->
+        <div class="numeral-display">
+            4<span>0</span>4
+        </div>
+
+        <h1 class="error-title">Surveillance Feed Not Found</h1>
+
+        <p class="error-desc">
+            The surveillance node, camera route, or report link you requested does not exist or has been relocated. Active perimeter monitoring and security analytics continue running uninterrupted.
+        </p>
+
+        <!-- Recovery Navigation -->
+        <div class="actions-group">
+            <a href="/dashboard" class="btn btn-primary">
+                <i class="fa-solid fa-gauge-high"></i>
+                Return to Dashboard
+            </a>
+            <a href="/analytics" class="btn btn-secondary">
+                <i class="fa-solid fa-chart-line"></i>
+                View Analytics
+            </a>
+        </div>
+
+        <!-- Bottom Telemetry Info -->
+        <div class="telemetry-footer">
+            <span>REF: ERR_FEED_404_OFFLINE</span>
+            <span>SYSTEM: RAKSHAK CORE v2.4</span>
+            <span id="live-time"></span>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const elem = document.getElementById('live-time');
+            if (elem) elem.textContent = timeStr + ' IST';
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>

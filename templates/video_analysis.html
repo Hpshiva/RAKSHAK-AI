@@ -89,17 +89,12 @@
             color: var(--text-primary);
         }
 
-        .logo-icon {
+        .logo-img {
             width: 36px;
             height: 36px;
-            background: linear-gradient(135deg, var(--color-surface-dark), var(--color-surface-dark-elevated));
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-on-dark);
-            font-size: 1rem;
-            box-shadow: var(--shadow-soft);
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.12));
         }
 
         .nav-links {
@@ -540,20 +535,43 @@
 
         /* Status Progress */
         .status-container {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
             margin-bottom: 24px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
+            align-items: center;
         }
         .status-stat {
             text-align: left;
-            border-right: 2px solid var(--color-hairline);
-            padding-right: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .status-stat:last-child { border-right: none; padding-right: 0; }
-        .status-stat .label { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px; }
-        .status-stat .value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+        .status-stat:first-child {
+            border-right: 1px solid var(--color-hairline);
+            padding-right: 16px;
+        }
+        .status-stat:last-child {
+            padding-left: 8px;
+        }
+        .status-stat .label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            letter-spacing: 0.01em;
+        }
+        .status-stat .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            min-height: 32px;
+        }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -613,7 +631,7 @@
         <div class="topbar">
             <div style="display: flex; align-items: center;">
                 <a href="/dashboard" class="logo-area" style="text-decoration: none; color: inherit;">
-                    <div class="logo-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Rakshak AI" class="logo-img">
                     RAKSHAK AI
                 </a>
                 <div class="nav-links">
@@ -702,7 +720,7 @@
                 </div>
                 <div class="status-stat">
                     <div class="label">System Threat</div>
-                    <div class="value" id="system-threat" style="font-size: 1.1rem; color: var(--accent-green);">Normal</div>
+                    <div class="value" id="system-threat" style="font-size: 1.4rem; font-weight: 700; color: var(--accent-green);">Normal</div>
                 </div>
             </div>
 
